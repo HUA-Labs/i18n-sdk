@@ -1,3 +1,4 @@
+"use client";
 import { useState, useEffect, useCallback, useContext, createContext, useMemo } from 'react';
 import { Translator } from '../core/translator';
 import { I18nConfig, I18nContextType, TranslationParams } from '../types';
