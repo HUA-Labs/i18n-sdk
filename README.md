@@ -96,7 +96,7 @@ return <h1>{title}</h1>;
 
 ## 기여하기
 
-버그 리포트, 기능 제안, PR 모두 환영합니다! 
+버그 리포트, 기능 제안, PR 모두 환영합니다!
 
 - **[Issues](https://github.com/HUA-Labs/i18n-sdk/issues)**
 - **[Discussions](https://github.com/HUA-Labs/i18n-sdk/discussions)**

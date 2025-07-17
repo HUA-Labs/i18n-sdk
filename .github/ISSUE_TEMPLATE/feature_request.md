@@ -22,6 +22,7 @@ Add any other context or screenshots about the feature request here.
 Please describe a specific use case where this feature would be beneficial.
 
 **Checklist**
+
 - [ ] I have searched existing issues to avoid duplicates
 - [ ] This feature would be useful for the community
 - [ ] I'm willing to help implement this feature if needed 

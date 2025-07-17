@@ -6,22 +6,26 @@ Thank you for your interest in contributing to hua-i18n-sdk! This document provi
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or yarn
 - Git
 
 ### Setup
 
 1. Fork the repository
+
 2. Clone your fork:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/i18n-sdk.git
    cd i18n-sdk
    ```
+
 3. Install dependencies:
    ```bash
    npm install
    ```
+
 4. Create a feature branch:
    ```bash
    git checkout -b feature/your-feature-name

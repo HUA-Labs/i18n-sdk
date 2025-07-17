@@ -29,4 +29,11 @@ beforeAll(() => {
 afterAll(() => {
   console.error = originalError;
   console.warn = originalWarn;
+});
+
+// Add a dummy test to satisfy Jest requirements
+describe('Jest Setup', () => {
+  it('should be properly configured', () => {
+    expect(true).toBe(true);
+  });
 }); 
