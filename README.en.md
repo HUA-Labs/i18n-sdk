@@ -301,7 +301,7 @@ If you'd like to contribute to the project, please refer to the [Contributing Gu
 ### Development Environment Setup
 
 ```bash
-git clone https://github.com/your-username/hua-i18n-sdk.git
+git clone https://github.com/HUA-Labs/i18n-sdk.git
 cd hua-i18n-sdk
 npm install
 npm run dev

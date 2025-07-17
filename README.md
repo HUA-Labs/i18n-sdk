@@ -301,7 +301,7 @@ npm run build:types
 ### 개발 환경 설정
 
 ```bash
-git clone https://github.com/your-username/hua-i18n-sdk.git
+git clone https://github.com/HUA-Labs/i18n-sdk.git
 cd hua-i18n-sdk
 npm install
 npm run dev
