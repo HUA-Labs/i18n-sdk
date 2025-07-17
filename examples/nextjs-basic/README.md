@@ -16,7 +16,7 @@ npm run dev
 
 ## 📁 프로젝트 구조
 
-```
+```text
 ├── app/
 │   ├── layout.tsx          # I18nProvider 설정
 │   ├── page.tsx            # 메인 페이지 (SSR 예제)
@@ -39,19 +39,23 @@ npm run dev
 ## 🎯 주요 기능
 
 ### 1. SSR/CSR 지원
+
 - **서버 컴포넌트**: `ssrTranslate()` 사용
 - **클라이언트 컴포넌트**: `useTranslation()` 훅 사용
 
 ### 2. 언어 전환
+
 - 실시간 언어 변경
 - URL 파라미터 기반 언어 감지
 - 브라우저 언어 자동 감지
 
 ### 3. Fallback 지원
+
 - 번역 키가 없을 때 fallback 언어 사용
 - 네임스페이스별 fallback
 
 ### 4. 타입 안전성
+
 - TypeScript로 번역 키 자동완성
 - 타입 체크 지원
 
@@ -102,6 +106,7 @@ export default function RootLayout({
 ### 3. 사용 예제
 
 #### 서버 컴포넌트 (SSR)
+
 ```tsx
 import { ssrTranslate } from 'hua-i18n-sdk';
 import translations from '@/translations';
@@ -118,6 +123,7 @@ export default function ServerPage() {
 ```
 
 #### 클라이언트 컴포넌트 (CSR)
+
 ```tsx
 'use client';
 import { useTranslation } from 'hua-i18n-sdk';
