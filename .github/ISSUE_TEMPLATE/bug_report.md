@@ -47,4 +47,4 @@ Add any other context about the problem here, including:
 
 - [ ] I have searched existing issues to avoid duplicates
 - [ ] I have provided a minimal reproduction example
-- [ ] I have included all relevant environment information 
+- [ ] I have included all relevant environment information

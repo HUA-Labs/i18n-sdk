@@ -147,14 +147,14 @@ export class Translator implements TranslatorInterface {
     try {
       // 1차: 요청된 언어에서 찾기
       const value = this.getNestedValue(this.allTranslations[language]?.[namespace], key);
-      if (typeof value === 'string') {
+      if (value !== undefined && typeof value === 'string') {
         return value;
       }
 
-      // 2: 폴백 언어에서 찾기 (ko → en → [MISSING] 흐름)
+      // 2차: 폴백 언어에서 찾기 (en → ko → [MISSING] 흐름)
       if (language !== this.config.fallbackLanguage && this.config.fallbackLanguage) {
         const fallbackValue = this.getNestedValue(this.allTranslations[this.config.fallbackLanguage]?.[namespace], key);
-        if (typeof fallbackValue === 'string') {
+        if (fallbackValue !== undefined && typeof fallbackValue === 'string') {
           if (this.config.debug) {
             console.log(`[i18n] Fallback: ${language} → ${this.config.fallbackLanguage} for key: ${namespace}.${key}`);
           }
@@ -162,10 +162,10 @@ export class Translator implements TranslatorInterface {
         }
       }
 
-      //3차: common 네임스페이스에서 찾기 (다른 네임스페이스인 경우)
+      // 3차: common 네임스페이스에서 찾기 (다른 네임스페이스인 경우)
       if (namespace !== 'common') {
         const commonValue = this.getNestedValue(this.allTranslations[language]?.['common'], key);
-        if (typeof commonValue === 'string') {
+        if (commonValue !== undefined && typeof commonValue === 'string') {
           if (this.config.debug) {
             console.log(`[i18n] Common fallback for key: ${namespace}.${key}`);
           }
@@ -173,7 +173,7 @@ export class Translator implements TranslatorInterface {
         }
       }
 
-      //4: 번역 키를 찾을 수 없는 경우
+      // 4차: 번역 키를 찾을 수 없는 경우
       if (this.config.missingKeyHandler) {
         return this.config.missingKeyHandler(`${namespace}.${key}`, language, namespace);
       }

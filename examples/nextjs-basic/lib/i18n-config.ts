@@ -17,8 +17,15 @@ export const i18nConfig: I18nConfig = {
       return {};
     }
   },
-  debug: process.env.NODE_ENV === 'development',
-  missingKeyHandler: (key: string) => `[MISSING: ${key}]`,
+  debug: true, // 디버그 모드 활성화
+  missingKeyHandler: (key: string, language: string) => {
+    console.log(`[i18n] Missing key handler called for: ${key} in language: ${language}`);
+    if (process.env.NODE_ENV === 'development') {
+      return `[MISSING: ${key}]`;
+    }
+    // 프로덕션에서는 키의 마지막 부분만 반환
+    return key.split('.').pop() || 'Translation not found';
+  },
   errorHandler: (error: any, language: string, namespace: string) => {
     console.error(`Translation error for ${language}:${namespace}:`, error);
   },

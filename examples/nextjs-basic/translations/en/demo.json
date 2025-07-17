@@ -39,5 +39,17 @@
     "languageChanged": "Language changed to {{language}}.",
     "fallbackTriggered": "Fallback triggered.",
     "missingKey": "Missing key: {{key}}"
+  },
+  "status": {
+    "title": "Current Status",
+    "currentLanguage": "Current Language",
+    "languageCode": "Language Code"
+  },
+  "ui": {
+    "devMode": "🔧 Dev Mode: Missing Key Display",
+    "prodMode": "🚀 Production Mode: User-Friendly Message",
+    "realtimeUpdate": "⏰ Real-time Update (every minute)",
+    "namePlaceholder": "Enter your name",
+    "fallbackExplanation": "When you switch to English, this message will fallback to Korean"
   }
 } 

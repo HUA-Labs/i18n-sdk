@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
+import I18nWrapper from "@/components/I18nWrapper";
 
 export const metadata: Metadata = {
   title: "hua-i18n-sdk Demo",
@@ -16,8 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <body className={inter.className}>
-        {children}
+      <body suppressHydrationWarning>
+        <I18nWrapper>
+          {children}
+        </I18nWrapper>
       </body>
     </html>
   );
