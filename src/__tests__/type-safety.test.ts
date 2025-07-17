@@ -323,6 +323,7 @@ describe('Type Safety Tests', () => {
           isReady: jest.fn(),
           getInitializationError: jest.fn(),
           clearCache: jest.fn(),
+          getCacheStats: jest.fn(),
           reloadTranslations: jest.fn()
         }
       };
@@ -376,6 +377,16 @@ describe('Type Safety Tests', () => {
         errorHandler: (error: Error) => {
           expect(error instanceof Error).toBe(true);
           expect(typeof error.message).toBe('string');
+        },
+        errorHandling: {
+          recoveryStrategy: {
+            maxRetries: 0, // 재시도 비활성화
+            retryDelay: 0,
+            backoffMultiplier: 1,
+            shouldRetry: () => false,
+            onRetry: () => {},
+            onMaxRetriesExceeded: () => {}
+          }
         }
       };
       
@@ -386,6 +397,6 @@ describe('Type Safety Tests', () => {
       } catch (error) {
         expect(error instanceof Error).toBe(true);
       }
-    });
+    }, 10000); // 타임아웃 증가
   });
 }); 

@@ -14,6 +14,7 @@ export interface LanguageConfig {
   formality?: 'informal' | 'casual' | 'formal' | 'polite';
 }
 
+// 더 구체적인 설정 타입 정의
 export interface I18nConfig {
   defaultLanguage: string;
   fallbackLanguage?: string;
@@ -26,6 +27,91 @@ export interface I18nConfig {
   missingKeyHandler?: (key: string, language: string, namespace: string) => string;
   // 번역 로딩 실패 시 동작
   errorHandler?: (error: Error, language: string, namespace: string) => void;
+  // 캐시 설정
+  cacheOptions?: {
+    maxSize?: number;
+    ttl?: number; // Time to live in milliseconds
+  };
+  // 성능 설정
+  performanceOptions?: {
+    preloadAll?: boolean;
+    lazyLoad?: boolean;
+  };
+  // 에러 처리 설정
+  errorHandling?: {
+    recoveryStrategy?: ErrorRecoveryStrategy;
+    logging?: ErrorLoggingConfig;
+    userFriendlyMessages?: boolean;
+    suppressErrors?: boolean;
+  };
+}
+
+// 에러 타입 정의
+export interface TranslationError extends Error {
+  code: 'MISSING_KEY' | 'LOAD_FAILED' | 'INVALID_KEY' | 'NETWORK_ERROR' | 'INITIALIZATION_ERROR' | 'VALIDATION_ERROR' | 'CACHE_ERROR';
+  language?: string;
+  namespace?: string;
+  key?: string;
+  originalError?: Error;
+  retryCount?: number;
+  maxRetries?: number;
+  timestamp: number;
+  context?: Record<string, unknown>;
+}
+
+// 에러 복구 전략
+export interface ErrorRecoveryStrategy {
+  maxRetries: number;
+  retryDelay: number; // milliseconds
+  backoffMultiplier: number;
+  shouldRetry: (error: TranslationError) => boolean;
+  onRetry: (error: TranslationError, attempt: number) => void;
+  onMaxRetriesExceeded: (error: TranslationError) => void;
+}
+
+// 에러 로깅 설정
+export interface ErrorLoggingConfig {
+  enabled: boolean;
+  level: 'error' | 'warn' | 'info' | 'debug';
+  includeStack: boolean;
+  includeContext: boolean;
+  customLogger?: (error: TranslationError) => void;
+}
+
+// 사용자 친화적 에러 메시지
+export interface UserFriendlyError {
+  code: string;
+  message: string;
+  suggestion?: string;
+  action?: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+}
+
+// 캐시 엔트리 타입
+export interface CacheEntry {
+  data: TranslationNamespace;
+  timestamp: number;
+  ttl: number;
+}
+
+// 로딩 상태 타입
+export interface LoadingState {
+  isLoading: boolean;
+  error: TranslationError | null;
+  progress?: {
+    loaded: number;
+    total: number;
+  };
+}
+
+// 번역 결과 타입
+export interface TranslationResult {
+  text: string;
+  language: string;
+  namespace: string;
+  key: string;
+  isFallback: boolean;
+  cacheHit: boolean;
 }
 
 export interface I18nContextType {
@@ -40,7 +126,7 @@ export interface I18nContextType {
   // 기존 동기 번역 함수 (하위 호환성)
   tSync: (key: string, namespace?: string, params?: TranslationParams) => string;
   isLoading: boolean;
-  error: Error | null;
+  error: TranslationError | null;
   supportedLanguages: LanguageConfig[];
   // 개발자 도구
   debug: {
@@ -49,9 +135,14 @@ export interface I18nContextType {
     getLoadedNamespaces: () => string[];
     getAllTranslations: () => Record<string, Record<string, any>>;
     isReady: () => boolean;
-    getInitializationError: () => Error | null;
+    getInitializationError: () => TranslationError | null;
     clearCache: () => void;
     reloadTranslations: () => Promise<void>;
+    getCacheStats: () => {
+      size: number;
+      hits: number;
+      misses: number;
+    };
   };
 }
 
@@ -115,4 +206,209 @@ export type NamespaceKeys<T extends TranslationData, N extends keyof T> = Extrac
 export const createTranslationKey = <T extends TranslationData, N extends keyof T, K extends NamespaceKeys<T, N>>(
   namespace: N,
   key: K
-): `${N & string}.${K & string}` => `${String(namespace)}.${String(key)}` as any; 
+): `${N & string}.${K & string}` => `${String(namespace)}.${String(key)}` as any;
+
+// 타입 가드 함수들
+export function isTranslationNamespace(value: unknown): value is TranslationNamespace {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isLanguageConfig(value: unknown): value is LanguageConfig {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as LanguageConfig).code === 'string' &&
+    typeof (value as LanguageConfig).name === 'string' &&
+    typeof (value as LanguageConfig).nativeName === 'string'
+  );
+}
+
+export function isTranslationError(value: unknown): value is TranslationError {
+  return (
+    value instanceof Error &&
+    typeof (value as TranslationError).code === 'string' &&
+    ['MISSING_KEY', 'LOAD_FAILED', 'INVALID_KEY', 'NETWORK_ERROR', 'INITIALIZATION_ERROR'].includes(
+      (value as TranslationError).code
+    )
+  );
+}
+
+// 설정 검증 함수
+export function validateI18nConfig(config: unknown): config is I18nConfig {
+  if (!config || typeof config !== 'object') {
+    return false;
+  }
+
+  const c = config as I18nConfig;
+  
+  return (
+    typeof c.defaultLanguage === 'string' &&
+    Array.isArray(c.supportedLanguages) &&
+    c.supportedLanguages.every(isLanguageConfig) &&
+    typeof c.loadTranslations === 'function'
+  );
+}
+
+// 에러 처리 유틸리티 함수들
+export function createTranslationError(
+  code: TranslationError['code'],
+  message: string,
+  originalError?: Error,
+  context?: {
+    language?: string;
+    namespace?: string;
+    key?: string;
+    retryCount?: number;
+    maxRetries?: number;
+  }
+): TranslationError {
+  const error = new Error(message) as TranslationError;
+  error.code = code;
+  error.language = context?.language;
+  error.namespace = context?.namespace;
+  error.key = context?.key;
+  error.originalError = originalError;
+  error.retryCount = context?.retryCount || 0;
+  error.maxRetries = context?.maxRetries || 3;
+  error.timestamp = Date.now();
+  error.name = 'TranslationError';
+  return error;
+}
+
+// 사용자 친화적 에러 메시지 생성
+export function createUserFriendlyError(error: TranslationError): UserFriendlyError {
+  const errorMessages: Record<TranslationError['code'], UserFriendlyError> = {
+    MISSING_KEY: {
+      code: 'MISSING_KEY',
+      message: '번역 키를 찾을 수 없습니다',
+      suggestion: '번역 파일에 해당 키가 있는지 확인해주세요',
+      action: '번역 파일 업데이트',
+      severity: 'low'
+    },
+    LOAD_FAILED: {
+      code: 'LOAD_FAILED',
+      message: '번역 파일을 불러오는데 실패했습니다',
+      suggestion: '네트워크 연결과 파일 경로를 확인해주세요',
+      action: '재시도',
+      severity: 'medium'
+    },
+    INVALID_KEY: {
+      code: 'INVALID_KEY',
+      message: '잘못된 번역 키 형식입니다',
+      suggestion: '키 형식을 "namespace.key" 형태로 입력해주세요',
+      action: '키 형식 수정',
+      severity: 'low'
+    },
+    NETWORK_ERROR: {
+      code: 'NETWORK_ERROR',
+      message: '네트워크 오류가 발생했습니다',
+      suggestion: '인터넷 연결을 확인하고 다시 시도해주세요',
+      action: '재시도',
+      severity: 'high'
+    },
+    INITIALIZATION_ERROR: {
+      code: 'INITIALIZATION_ERROR',
+      message: '번역 시스템 초기화에 실패했습니다',
+      suggestion: '설정을 확인하고 페이지를 새로고침해주세요',
+      action: '페이지 새로고침',
+      severity: 'critical'
+    },
+    VALIDATION_ERROR: {
+      code: 'VALIDATION_ERROR',
+      message: '설정 검증에 실패했습니다',
+      suggestion: '번역 설정을 확인해주세요',
+      action: '설정 수정',
+      severity: 'medium'
+    },
+    CACHE_ERROR: {
+      code: 'CACHE_ERROR',
+      message: '캐시 처리 중 오류가 발생했습니다',
+      suggestion: '캐시를 초기화하고 다시 시도해주세요',
+      action: '캐시 초기화',
+      severity: 'low'
+    }
+  };
+
+  return errorMessages[error.code];
+}
+
+// 에러 복구 가능 여부 확인
+export function isRecoverableError(error: TranslationError): boolean {
+  const recoverableCodes: TranslationError['code'][] = [
+    'LOAD_FAILED',
+    'NETWORK_ERROR',
+    'CACHE_ERROR'
+  ];
+  
+  return recoverableCodes.includes(error.code) && 
+         (error.retryCount || 0) < (error.maxRetries || 3);
+}
+
+// 기본 에러 복구 전략
+export const defaultErrorRecoveryStrategy: ErrorRecoveryStrategy = {
+  maxRetries: 3,
+  retryDelay: 1000,
+  backoffMultiplier: 2,
+  shouldRetry: isRecoverableError,
+  onRetry: (error: TranslationError, attempt: number) => {
+    console.warn(`Retrying translation operation (attempt ${attempt}/${error.maxRetries}):`, error.message);
+  },
+  onMaxRetriesExceeded: (error: TranslationError) => {
+    console.error('Max retries exceeded for translation operation:', error.message);
+  }
+};
+
+// 기본 에러 로깅 설정
+export const defaultErrorLoggingConfig: ErrorLoggingConfig = {
+  enabled: true,
+  level: 'error',
+  includeStack: true,
+  includeContext: true,
+  customLogger: undefined
+};
+
+// 에러 로깅 함수
+export function logTranslationError(
+  error: TranslationError, 
+  config: ErrorLoggingConfig = defaultErrorLoggingConfig
+): void {
+  if (!config.enabled) return;
+
+  const logData: Record<string, unknown> = {
+    code: error.code,
+    message: error.message,
+    timestamp: error.timestamp,
+    retryCount: error.retryCount,
+    maxRetries: error.maxRetries
+  };
+
+  if (config.includeContext) {
+    logData.language = error.language;
+    logData.namespace = error.namespace;
+    logData.key = error.key;
+    logData.context = error.context;
+  }
+
+  if (config.includeStack && error.stack) {
+    logData.stack = error.stack;
+  }
+
+  if (config.customLogger) {
+    config.customLogger(error);
+  } else {
+    switch (config.level) {
+      case 'error':
+        console.error('Translation Error:', logData);
+        break;
+      case 'warn':
+        console.warn('Translation Warning:', logData);
+        break;
+      case 'info':
+        console.info('Translation Info:', logData);
+        break;
+      case 'debug':
+        console.debug('Translation Debug:', logData);
+        break;
+    }
+  }
+} 

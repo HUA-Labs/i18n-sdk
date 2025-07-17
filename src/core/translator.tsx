@@ -1,3 +1,18 @@
+import { 
+  I18nConfig, 
+  TranslationNamespace, 
+  TranslationError, 
+  CacheEntry, 
+  TranslationResult,
+  isTranslationNamespace,
+  validateI18nConfig,
+  createTranslationError,
+  logTranslationError,
+  defaultErrorRecoveryStrategy,
+  defaultErrorLoggingConfig,
+  isRecoverableError
+} from '../types';
+
 export interface TranslatorInterface {
   translate(key: string, language?: string): string;
   setLanguage(lang: string): void;
@@ -8,16 +23,24 @@ export interface TranslatorInterface {
 }
 
 export class Translator implements TranslatorInterface {
-  private cache = new Map();
+  private cache = new Map<string, CacheEntry>();
   private loadedNamespaces = new Set<string>();
-  private loadingPromises = new Map();
-  private allTranslations: Record<string, Record<string, Record<string, string>>> = {};
+  private loadingPromises = new Map<string, Promise<TranslationNamespace>>();
+  private allTranslations: Record<string, Record<string, TranslationNamespace>> = {};
   private isInitialized = false;
-  private initializationError: Error | null = null;
-  private config: any;
+  private initializationError: TranslationError | null = null;
+  private config: I18nConfig;
   private currentLang: string = 'en';
+  private cacheStats = {
+    hits: 0,
+    misses: 0,
+  };
 
-  constructor(config: any) {
+  constructor(config: I18nConfig) {
+    if (!validateI18nConfig(config)) {
+      throw new Error('Invalid I18nConfig provided');
+    }
+    
     this.config = {
       fallbackLanguage: 'en',
       namespaces: ['common'],
@@ -32,7 +55,7 @@ export class Translator implements TranslatorInterface {
   /**
    * 모든 번역 데이터를 미리 로드 (hua-api 스타일)
    */
-  async initialize() {
+  async initialize(): Promise<void> {
     if (this.isInitialized) {
       return;
     }
@@ -48,38 +71,55 @@ export class Translator implements TranslatorInterface {
         languages.push(this.config.fallbackLanguage);
       }
 
-      console.log('Initializing translator with languages:', languages);
-      console.log('Current language:', this.currentLang);
-      console.log('Config namespaces:', this.config.namespaces);
+      if (this.config.debug) {
+        console.log('Initializing translator with languages:', languages);
+        console.log('Current language:', this.currentLang);
+        console.log('Config namespaces:', this.config.namespaces);
+      }
 
       for (const language of languages) {
-        console.log('Processing language:', language);
+        if (this.config.debug) {
+          console.log('Processing language:', language);
+        }
+        
         if (!this.allTranslations[language]) {
           this.allTranslations[language] = {};
         }
         
         for (const namespace of this.config.namespaces || []) {
-          console.log('Loading namespace:', namespace, 'for language:', language);
+          if (this.config.debug) {
+            console.log('Loading namespace:', namespace, 'for language:', language);
+          }
+          
           try {
-            const data = await this.config.loadTranslations(language, namespace);
-            console.log('Loaded data for', language, namespace, ':', data);
+            const data = await this.safeLoadTranslations(language, namespace);
+            
+            if (this.config.debug) {
+              console.log('Loaded data for', language, namespace, ':', data);
+            }
+            
             this.allTranslations[language][namespace] = data;
-            this.cache.set(`${language}:${namespace}`, data);
+            this.setCacheEntry(`${language}:${namespace}`, data);
           } catch (error) {
-            const translationError = error as Error;
+            const translationError = error as TranslationError;
+            
             if (this.config.errorHandler) {
               this.config.errorHandler(translationError, language, namespace);
             }
+            
             // 폴백 언어로 시도
-            if (language !== this.config.fallbackLanguage && this.config.fallbackLanguage) {
+            if (this.config.fallbackLanguage && language !== this.config.fallbackLanguage) {
               try {
-                const fallbackData = await this.config.loadTranslations(this.config.fallbackLanguage, namespace);
+                const fallbackData = await this.safeLoadTranslations(this.config.fallbackLanguage, namespace);
                 this.allTranslations[language][namespace] = fallbackData;
-                this.cache.set(`${language}:${namespace}`, fallbackData);
+                this.setCacheEntry(`${language}:${namespace}`, fallbackData);
               } catch (fallbackError) {
+                const fallbackTranslationError = fallbackError as TranslationError;
+                
                 if (this.config.errorHandler) {
-                  this.config.errorHandler(fallbackError as Error, this.config.fallbackLanguage, namespace);
+                  this.config.errorHandler(fallbackTranslationError, this.config.fallbackLanguage, namespace);
                 }
+                
                 // 최종 폴백: 빈 객체
                 this.allTranslations[language][namespace] = {};
               }
@@ -93,12 +133,20 @@ export class Translator implements TranslatorInterface {
 
       this.isInitialized = true;
       this.initializationError = null;
-      console.log('Translator initialized successfully:', this.allTranslations);
+      
+      if (this.config.debug) {
+        console.log('Translator initialized successfully:', this.allTranslations);
+      }
     } catch (error) {
-      this.initializationError = error as Error;
+      this.initializationError = this.createTranslationError(
+        'INITIALIZATION_ERROR',
+        error as Error
+      );
+      
       if (this.config.errorHandler) {
         this.config.errorHandler(this.initializationError, this.currentLang, 'initialization');
       }
+      
       throw this.initializationError;
     }
   }
@@ -109,15 +157,21 @@ export class Translator implements TranslatorInterface {
   translate(key: string, language?: string): string {
     if (!this.isInitialized) {
       if (this.initializationError) {
-        console.warn('Translator not initialized due to error:', this.initializationError.message);
+        if (this.config.debug) {
+          console.warn('Translator not initialized due to error:', this.initializationError.message);
+        }
       } else {
-        console.warn('Translator not initialized. Call initialize() first.');
+        if (this.config.debug) {
+          console.warn('Translator not initialized. Call initialize() first.');
+        }
       }
       return this.config.missingKeyHandler ? this.config.missingKeyHandler(key, language || this.currentLang, key) : key;
     }
 
     if (!key || typeof key !== 'string') {
-      console.warn('Invalid translation key:', key);
+      if (this.config.debug) {
+        console.warn('Invalid translation key:', key);
+      }
       return '';
     }
 
@@ -135,7 +189,9 @@ export class Translator implements TranslatorInterface {
       const translationKey = parts.slice(1).join('.');
       return this.findInNamespace(namespace, translationKey, targetLanguage);
     } catch (error) {
-      console.error('Translation error for key:', key, error);
+      if (this.config.debug) {
+        console.error('Translation error for key:', key, error);
+      }
       return this.config.missingKeyHandler ? this.config.missingKeyHandler(key, targetLanguage, key) : key;
     }
   }
@@ -147,14 +203,14 @@ export class Translator implements TranslatorInterface {
     try {
       // 1차: 요청된 언어에서 찾기
       const value = this.getNestedValue(this.allTranslations[language]?.[namespace], key);
-      if (value !== undefined && typeof value === 'string') {
+      if (typeof value === 'string') {
         return value;
       }
 
       // 2차: 폴백 언어에서 찾기 (en → ko → [MISSING] 흐름)
       if (language !== this.config.fallbackLanguage && this.config.fallbackLanguage) {
         const fallbackValue = this.getNestedValue(this.allTranslations[this.config.fallbackLanguage]?.[namespace], key);
-        if (fallbackValue !== undefined && typeof fallbackValue === 'string') {
+        if (typeof fallbackValue === 'string') {
           if (this.config.debug) {
             console.log(`[i18n] Fallback: ${language} → ${this.config.fallbackLanguage} for key: ${namespace}.${key}`);
           }
@@ -165,7 +221,7 @@ export class Translator implements TranslatorInterface {
       // 3차: common 네임스페이스에서 찾기 (다른 네임스페이스인 경우)
       if (namespace !== 'common') {
         const commonValue = this.getNestedValue(this.allTranslations[language]?.['common'], key);
-        if (commonValue !== undefined && typeof commonValue === 'string') {
+        if (typeof commonValue === 'string') {
           if (this.config.debug) {
             console.log(`[i18n] Common fallback for key: ${namespace}.${key}`);
           }
@@ -173,13 +229,15 @@ export class Translator implements TranslatorInterface {
         }
       }
 
-      // 4차: 번역 키를 찾을 수 없는 경우
+      // 4차: 번역 키를 찾을 수 없는 경우 (string이 아닌 값 포함)
       if (this.config.missingKeyHandler) {
         return this.config.missingKeyHandler(`${namespace}.${key}`, language, namespace);
       }
       return `${namespace}.${key}`;
     } catch (error) {
-      console.error('Error finding translation for namespace:', namespace, 'key:', key, error);
+      if (this.config.debug) {
+        console.error('Error finding translation for namespace:', namespace, 'key:', key, error);
+      }
       return `${namespace}.${key}`;
     }
   }
@@ -187,17 +245,19 @@ export class Translator implements TranslatorInterface {
   /**
    * 중첩된 객체에서 키 값을 찾기
    */
-  private getNestedValue(obj: any, path: string): any {
+  private getNestedValue(obj: unknown, path: string): unknown {
     if (!obj || typeof obj !== 'object') {
       return undefined;
     }
 
     try {
-      return path.split('.').reduce((current, key) => {
-        return current && typeof current === 'object' ? current[key] : undefined;
+      return path.split('.').reduce((current: unknown, key: string) => {
+        return current && typeof current === 'object' ? (current as Record<string, unknown>)[key] : undefined;
       }, obj);
     } catch (error) {
-      console.error('Error accessing nested value for path:', path, error);
+      if (this.config.debug) {
+        console.error('Error accessing nested value for path:', path, error);
+      }
       return undefined;
     }
   }
@@ -205,7 +265,7 @@ export class Translator implements TranslatorInterface {
   /**
    * 번역 텍스트에서 파라미터 치환
    */
-  private interpolate(text: string, params: Record<string, any>): string {
+  private interpolate(text: string, params: Record<string, unknown>): string {
     if (!params || typeof text !== 'string') {
       return text;
     }
@@ -214,13 +274,17 @@ export class Translator implements TranslatorInterface {
       return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
         const value = params[key];
         if (value === undefined || value === null) {
-          console.warn(`Missing parameter: ${key} in translation: ${text}`);
+          if (this.config.debug) {
+            console.warn(`Missing parameter: ${key} in translation: ${text}`);
+          }
           return match;
         }
-        return value.toString();
+        return String(value);
       });
     } catch (error) {
-      console.error('Error interpolating parameters:', error);
+      if (this.config.debug) {
+        console.error('Error interpolating parameters:', error);
+      }
       return text;
     }
   }
@@ -228,12 +292,14 @@ export class Translator implements TranslatorInterface {
   /**
    * 파라미터가 있는 번역 함수
    */
-  translateWithParams(key: string, params?: Record<string, any>, language?: string): string {
+  translateWithParams(key: string, params?: Record<string, unknown>, language?: string): string {
     try {
       const translated = this.translate(key, language);
       return params ? this.interpolate(translated, params) : translated;
     } catch (error) {
-      console.error('Error in translateWithParams:', error);
+      if (this.config.debug) {
+        console.error('Error in translateWithParams:', error);
+      }
       return key;
     }
   }
@@ -243,7 +309,9 @@ export class Translator implements TranslatorInterface {
    */
   setLanguage(language: string): void {
     if (!language || typeof language !== 'string') {
-      console.warn('Invalid language:', language);
+      if (this.config.debug) {
+        console.warn('Invalid language:', language);
+      }
       return;
     }
 
@@ -252,7 +320,9 @@ export class Translator implements TranslatorInterface {
       // 새로운 언어의 번역 데이터가 없으면 로드
       if (!this.allTranslations[language]) {
         this.loadLanguageData(language).catch(error => {
-          console.error('Error loading language data for:', language, error);
+          if (this.config.debug) {
+            console.error('Error loading language data for:', language, error);
+          }
         });
       }
     }
@@ -266,19 +336,24 @@ export class Translator implements TranslatorInterface {
       this.allTranslations[language] = {};
       for (const namespace of this.config.namespaces || []) {
         try {
-          const data = await this.config.loadTranslations(language, namespace);
+          const data = await this.safeLoadTranslations(language, namespace);
           this.allTranslations[language][namespace] = data;
-          this.cache.set(`${language}:${namespace}`, data);
+          this.setCacheEntry(`${language}:${namespace}`, data);
         } catch (error) {
+          const translationError = error as TranslationError;
+          
           if (this.config.errorHandler) {
-            this.config.errorHandler(error as Error, language, namespace);
+            this.config.errorHandler(translationError, language, namespace);
           }
+          
           // 에러 발생 시 빈 객체로 설정
           this.allTranslations[language][namespace] = {};
         }
       }
     } catch (error) {
-      console.error('Failed to load language data for:', language, error);
+      if (this.config.debug) {
+        console.error('Failed to load language data for:', language, error);
+      }
       throw error;
     }
   }
@@ -307,7 +382,7 @@ export class Translator implements TranslatorInterface {
   /**
    * 초기화 에러 확인
    */
-  getInitializationError(): Error | null {
+  getInitializationError(): TranslationError | null {
     return this.initializationError;
   }
 
@@ -318,6 +393,156 @@ export class Translator implements TranslatorInterface {
     this.cache.clear();
     this.loadedNamespaces.clear();
     this.loadingPromises.clear();
+    this.cacheStats = { hits: 0, misses: 0 };
+  }
+
+  /**
+   * 캐시 엔트리 설정
+   */
+  private setCacheEntry(key: string, data: TranslationNamespace): void {
+    const ttl = this.config.cacheOptions?.ttl || 24 * 60 * 60 * 1000; // 기본 24시간
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      ttl
+    });
+  }
+
+  /**
+   * 캐시에서 데이터 가져오기
+   */
+  private getCacheEntry(key: string): TranslationNamespace | null {
+    const entry = this.cache.get(key);
+    if (!entry) {
+      this.cacheStats.misses++;
+      return null;
+    }
+
+    // TTL 체크
+    if (Date.now() - entry.timestamp > entry.ttl) {
+      this.cache.delete(key);
+      this.cacheStats.misses++;
+      return null;
+    }
+
+    this.cacheStats.hits++;
+    return entry.data;
+  }
+
+  /**
+   * 에러 생성 헬퍼
+   */
+  private createTranslationError(
+    code: TranslationError['code'],
+    originalError: Error,
+    language?: string,
+    namespace?: string,
+    key?: string
+  ): TranslationError {
+    return createTranslationError(code, originalError.message, originalError, {
+      language,
+      namespace,
+      key,
+      retryCount: 0,
+      maxRetries: this.config.errorHandling?.recoveryStrategy?.maxRetries || 3
+    });
+  }
+
+  /**
+   * 에러 로깅
+   */
+  private logError(error: TranslationError): void {
+    const loggingConfig = this.config.errorHandling?.logging || defaultErrorLoggingConfig;
+    logTranslationError(error, loggingConfig);
+  }
+
+  /**
+   * 에러 복구 시도
+   */
+  private async retryOperation<T>(
+    operation: () => Promise<T>,
+    error: TranslationError,
+    context: { language?: string; namespace?: string; key?: string }
+  ): Promise<T> {
+    const recoveryStrategy = this.config.errorHandling?.recoveryStrategy || defaultErrorRecoveryStrategy;
+    
+    if (!recoveryStrategy.shouldRetry(error)) {
+      throw error;
+    }
+
+    let lastError = error;
+    
+    for (let attempt = 1; attempt <= recoveryStrategy.maxRetries; attempt++) {
+      try {
+        // 지수 백오프 적용
+        const delay = recoveryStrategy.retryDelay * Math.pow(recoveryStrategy.backoffMultiplier, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // 재시도 콜백 호출
+        recoveryStrategy.onRetry(error, attempt);
+        
+        // 작업 재시도
+        return await operation();
+      } catch (retryError) {
+        lastError = createTranslationError(
+          error.code,
+          (retryError as Error).message,
+          retryError as Error,
+          {
+            language: context.language,
+            namespace: context.namespace,
+            key: context.key,
+            retryCount: attempt,
+            maxRetries: recoveryStrategy.maxRetries
+          }
+        );
+        lastError.retryCount = attempt;
+        lastError.maxRetries = recoveryStrategy.maxRetries;
+        
+        if (attempt === recoveryStrategy.maxRetries) {
+          recoveryStrategy.onMaxRetriesExceeded(lastError);
+          this.logError(lastError);
+          throw lastError;
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
+   * 안전한 번역 로딩 (재시도 포함)
+   */
+  private async safeLoadTranslations(language: string, namespace: string): Promise<TranslationNamespace> {
+    const loadOperation = async (): Promise<TranslationNamespace> => {
+      const data = await this.config.loadTranslations(language, namespace);
+      
+      if (!isTranslationNamespace(data)) {
+        throw new Error(`Invalid translation data for ${language}:${namespace}`);
+      }
+      
+      return data;
+    };
+
+    try {
+      return await loadOperation();
+    } catch (error) {
+      const translationError = this.createTranslationError(
+        'LOAD_FAILED',
+        error as Error,
+        language,
+        namespace
+      );
+      
+      // 재시도 가능한 에러인지 확인
+      if (isRecoverableError(translationError)) {
+        return await this.retryOperation(loadOperation, translationError, { language, namespace });
+      }
+      
+      // 재시도 불가능한 에러는 바로 던지기
+      this.logError(translationError);
+      throw translationError;
+    }
   }
 
   /**
@@ -332,34 +557,39 @@ export class Translator implements TranslatorInterface {
       isReady: () => this.isReady(),
       getInitializationError: () => this.getInitializationError(),
       clearCache: () => this.clearCache(),
+      getCacheStats: () => ({
+        size: this.cache.size,
+        hits: this.cacheStats.hits,
+        misses: this.cacheStats.misses,
+      }),
     };
   }
 
   /**
    * SSR에서 하이드레이션을 위한 데이터 설정
    */
-  hydrateFromSSR(translations: Record<string, Record<string, any>>) {
+  hydrateFromSSR(translations: Record<string, Record<string, TranslationNamespace>>): void {
     this.allTranslations = translations;
     // 캐시도 함께 채움
     for (const language of Object.keys(translations)) {
       for (const namespace of Object.keys(translations[language])) {
-        this.cache.set(`${language}:${namespace}`, translations[language][namespace]);
+        this.setCacheEntry(`${language}:${namespace}`, translations[language][namespace]);
       }
     }
     this.isInitialized = true;
   }
 
   // 기존 메서드들 (하위 호환성을 위해 유지)
-  async translateAsync(key: string, params?: Record<string, any>): Promise<string> {
+  async translateAsync(key: string, params?: Record<string, unknown>): Promise<string> {
     try {
       const { namespace, key: translationKey } = this.parseKey(key);
       // 현재 언어로 번역 시도
       let translationData = await this.loadTranslationData(this.currentLang, namespace);
-      let translation = this.getNestedValue(translationData, translationKey);
+      let translation = this.getNestedValue(translationData, translationKey) as string;
       // 현재 언어에서 찾지 못한 경우 폴백 언어로 시도
-      if (!translation && this.currentLang !== this.config.fallbackLanguage) {
+      if (!translation && this.config.fallbackLanguage && this.currentLang !== this.config.fallbackLanguage) {
         translationData = await this.loadTranslationData(this.config.fallbackLanguage, namespace);
-        translation = this.getNestedValue(translationData, translationKey);
+        translation = this.getNestedValue(translationData, translationKey) as string;
       }
       // 번역을 찾지 못한 경우
       if (!translation) {
@@ -373,29 +603,31 @@ export class Translator implements TranslatorInterface {
       }
       return params ? this.interpolate(translation, params) : translation;
     } catch (error) {
-      console.error('Error in translateAsync:', error);
+      if (this.config.debug) {
+        console.error('Error in translateAsync:', error);
+      }
       return key;
     }
   }
 
-  translateSync(key: string, params?: Record<string, any>): string {
+  translateSync(key: string, params?: Record<string, unknown>): string {
     try {
       const { namespace, key: translationKey } = this.parseKey(key);
       // 현재 언어의 캐시된 데이터 확인
       const currentCacheKey = `${this.currentLang}:${namespace}`;
-      if (this.cache.has(currentCacheKey)) {
-        const translationData = this.cache.get(currentCacheKey);
-        const translation = this.getNestedValue(translationData, translationKey);
+      const cachedData = this.getCacheEntry(currentCacheKey);
+      if (cachedData) {
+        const translation = this.getNestedValue(cachedData, translationKey) as string;
         if (translation) {
           return params ? this.interpolate(translation, params) : translation;
         }
       }
       // 폴백 언어의 캐시된 데이터 확인
-      if (this.currentLang !== this.config.fallbackLanguage) {
+      if (this.config.fallbackLanguage && this.currentLang !== this.config.fallbackLanguage) {
         const fallbackCacheKey = `${this.config.fallbackLanguage}:${namespace}`;
-        if (this.cache.has(fallbackCacheKey)) {
-          const translationData = this.cache.get(fallbackCacheKey);
-          const translation = this.getNestedValue(translationData, translationKey);
+        const fallbackCachedData = this.getCacheEntry(fallbackCacheKey);
+        if (fallbackCachedData) {
+          const translation = this.getNestedValue(fallbackCachedData, translationKey) as string;
           if (translation) {
             return params ? this.interpolate(translation, params) : translation;
           }
@@ -407,7 +639,9 @@ export class Translator implements TranslatorInterface {
       }
       return key;
     } catch (error) {
-      console.error('Error in translateSync:', error);
+      if (this.config.debug) {
+        console.error('Error in translateSync:', error);
+      }
       return key;
     }
   }
@@ -420,14 +654,18 @@ export class Translator implements TranslatorInterface {
     return { namespace: parts[0], key: parts.slice(1).join('.') };
   }
 
-  private async loadTranslationData(language: string, namespace: string): Promise<Record<string, any>> {
+  private async loadTranslationData(language: string, namespace: string): Promise<TranslationNamespace> {
     const cacheKey = `${language}:${namespace}`;
-    if (this.loadingPromises.has(cacheKey)) {
-      return this.loadingPromises.get(cacheKey);
+    const existingPromise = this.loadingPromises.get(cacheKey);
+    if (existingPromise) {
+      return existingPromise;
     }
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
+    
+    const cachedData = this.getCacheEntry(cacheKey);
+    if (cachedData) {
+      return cachedData;
     }
+    
     const loadingPromise = this._loadTranslationData(language, namespace);
     this.loadingPromises.set(cacheKey, loadingPromise);
     try {
@@ -440,29 +678,37 @@ export class Translator implements TranslatorInterface {
     }
   }
 
-  private async _loadTranslationData(language: string, namespace: string): Promise<Record<string, any>> {
+  private async _loadTranslationData(language: string, namespace: string): Promise<TranslationNamespace> {
     const cacheKey = `${language}:${namespace}`;
     try {
-      const data = await this.config.loadTranslations(language, namespace);
-      this.cache.set(cacheKey, data);
+      const data = await this.safeLoadTranslations(language, namespace);
+      
+      this.setCacheEntry(cacheKey, data);
       this.loadedNamespaces.add(namespace);
+      
       if (this.config.debug) {
         console.log(`Loaded translations for ${language}:${namespace}`, data);
       }
+      
       return data;
     } catch (error) {
+      const translationError = error as TranslationError;
+      
       if (this.config.errorHandler) {
-        this.config.errorHandler(error as Error, language, namespace);
+        this.config.errorHandler(translationError, language, namespace);
       }
-      if (language !== this.config.fallbackLanguage) {
+      
+      if (this.config.fallbackLanguage && language !== this.config.fallbackLanguage) {
         try {
-          const fallbackData = await this.config.loadTranslations(this.config.fallbackLanguage, namespace);
-          this.cache.set(cacheKey, fallbackData);
+          const fallbackData = await this.safeLoadTranslations(this.config.fallbackLanguage, namespace);
+          this.setCacheEntry(cacheKey, fallbackData);
           this.loadedNamespaces.add(namespace);
           return fallbackData;
         } catch (fallbackError) {
+          const fallbackTranslationError = fallbackError as TranslationError;
+          
           if (this.config.errorHandler) {
-            this.config.errorHandler(fallbackError as Error, this.config.fallbackLanguage, namespace);
+            this.config.errorHandler(fallbackTranslationError, this.config.fallbackLanguage, namespace);
           }
         }
       }
@@ -481,7 +727,7 @@ export function ssrTranslate({
   fallbackLanguage = 'en', 
   missingKeyHandler = (key: string) => key 
 }: {
-  translations: Record<string, Record<string, any>>;
+  translations: Record<string, Record<string, TranslationNamespace>>;
   key: string;
   language?: string;
   fallbackLanguage?: string;
@@ -512,7 +758,7 @@ export function ssrTranslate({
  * SSR에서 특정 네임스페이스에서 키 찾기
  */
 function ssrFindInNamespace(
-  translations: Record<string, Record<string, any>>, 
+  translations: Record<string, Record<string, TranslationNamespace>>, 
   namespace: string, 
   key: string, 
   language: string, 
@@ -551,13 +797,13 @@ function ssrFindInNamespace(
 /**
  * 중첩된 객체에서 키 값을 찾기 (SSR용)
  */
-function getNestedValue(obj: any, path: string): any {
+function getNestedValue(obj: unknown, path: string): unknown {
   if (!obj || typeof obj !== 'object') {
     return undefined;
   }
   try {
-    return path.split('.').reduce((current: any, key: string) => {
-      return current && typeof current === 'object' ? current[key] : undefined;
+    return path.split('.').reduce((current: unknown, key: string) => {
+      return current && typeof current === 'object' ? (current as Record<string, unknown>)[key] : undefined;
     }, obj);
   }
   catch (error) {

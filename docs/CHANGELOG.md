@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-07-17
+
+### Major: Type Safety & Error Handling Overhaul
+
+#### Added
+
+- **Enhanced Type Safety:**: Applied strict types across all core logic with additional type guards and utility functions.
+- **Structured Error System**: Introduced `TranslationError` type, user-friendly error messages, and recovery strategies (retry, backoff, max attempts).
+- **Error Logging & Debugging**: Supports log levels, custom loggers, and contextual error data.
+- **Error Recovery Options**: New `errorHandling.recoveryStrategy` option enables automatic retries on network or loading failures.
+- **Test Environment Optimization**: Disables retry logic during testing to support fast failures.
+
+#### Changed
+
+- **No Breaking Changes**: Fully compatible with sum-diary, examples, and existing service code.
+- **Same default behavior, but with improved stability and extensibility.**
+- **Updated Documentation**: README, SDK_REFERENCE, and CHANGELOG all revised for v1.1.0.
+
+#### Fixed
+
+- **Automatic recovery and friendly messages for unexpected errors.**
+- **Resolved timeout issues during test runs.**
+
+#### Migration Guide
+
+- Existing projects do not need to change anything – `errorHandling` is fully optional.
+- New options are non-breaking and fully backward-compatible with previous APIs and usage.
+
+---
+
 ## [1.0.3] - 2025-07-17
 
 ### 🎯 Perfect Fallback & Demo Polish

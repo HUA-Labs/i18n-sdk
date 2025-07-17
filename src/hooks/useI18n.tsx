@@ -1,10 +1,14 @@
 "use client";
 import { useState, useEffect, useCallback, useContext, createContext, useMemo } from 'react';
 import { Translator } from '../core/translator';
-import { I18nConfig, I18nContextType, TranslationParams } from '../types';
-
-// 전역 Translator 인스턴스
-let globalTranslator: Translator | null = null;
+import { TranslatorFactory } from '../core/translator-factory';
+import { 
+  I18nConfig, 
+  I18nContextType, 
+  TranslationParams, 
+  TranslationError,
+  validateI18nConfig
+} from '../types';
 
 // React Context
 const I18nContext = createContext<I18nContextType | null>(null);
@@ -22,14 +26,14 @@ export function I18nProvider({
   const [currentLanguage, setCurrentLanguageState] = useState(config.defaultLanguage);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<TranslationError | null>(null);
 
   // Translator 인스턴스 초기화 (메모이제이션)
   const translator = useMemo(() => {
-    if (!globalTranslator) {
-      globalTranslator = new Translator(config);
+    if (!validateI18nConfig(config)) {
+      throw new Error('Invalid I18nConfig provided to I18nProvider');
     }
-    return globalTranslator;
+    return TranslatorFactory.create(config);
   }, [config]);
 
   useEffect(() => {
@@ -44,16 +48,18 @@ export function I18nProvider({
         await translator.initialize();
         setIsInitialized(true);
       } catch (err) {
-        const initError = err as Error;
+        const initError = err as TranslationError;
         setError(initError);
-        console.error('Failed to initialize translator:', initError);
+        if (config.debug) {
+          console.error('Failed to initialize translator:', initError);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeTranslator();
-  }, [translator, currentLanguage]);
+  }, [translator, currentLanguage, config.debug]);
 
   // 언어 변경 함수 (메모이제이션)
   const setLanguage = useCallback((language: string) => {
@@ -82,7 +88,9 @@ export function I18nProvider({
   // 기존 비동기 번역 함수 (하위 호환성)
   const tAsync = useCallback(async (key: string, params?: TranslationParams) => {
     if (!translator) {
-      console.warn('Translator not initialized');
+      if (config.debug) {
+        console.warn('Translator not initialized');
+      }
       return key;
     }
 
@@ -91,22 +99,26 @@ export function I18nProvider({
       const result = await translator.translateAsync(key, params);
       return result;
     } catch (error) {
-      console.error('Translation error:', error);
+      if (config.debug) {
+        console.error('Translation error:', error);
+      }
       return key;
     } finally {
       setIsLoading(false);
     }
-  }, [translator]);
+  }, [translator, config.debug]);
 
   // 기존 동기 번역 함수 (하위 호환성)
   const tSync = useCallback((key: string, namespace?: string, params?: TranslationParams) => {
     if (!translator) {
-      console.warn('Translator not initialized');
+      if (config.debug) {
+        console.warn('Translator not initialized');
+      }
       return key;
     }
 
     return translator.translateSync(key, params);
-  }, [translator]);
+  }, [translator, config.debug]);
 
   // 개발자 도구 (메모이제이션)
   const debug = useMemo(() => ({
@@ -117,6 +129,7 @@ export function I18nProvider({
     isReady: () => translator?.isReady() || false,
     getInitializationError: () => translator?.getInitializationError() || error,
     clearCache: () => translator?.clearCache(),
+    getCacheStats: () => translator?.debug().getCacheStats() || { size: 0, hits: 0, misses: 0 },
     reloadTranslations: async () => {
       if (translator) {
         setIsLoading(true);
@@ -124,7 +137,7 @@ export function I18nProvider({
         try {
           await translator.initialize();
         } catch (err) {
-          setError(err as Error);
+          setError(err as TranslationError);
         } finally {
           setIsLoading(false);
         }
@@ -180,6 +193,7 @@ export function useI18n(): I18nContextType {
         isReady: () => false,
         getInitializationError: () => null,
         clearCache: () => {},
+        getCacheStats: () => ({ size: 0, hits: 0, misses: 0 }),
         reloadTranslations: async () => {},
       },
     };
@@ -245,7 +259,7 @@ export function usePreloadTranslations() {
   const context = useContext(I18nContext);
   
   const preload = useCallback(async (namespaces: string[]) => {
-    if (!globalTranslator || !context) return;
+    if (!context) return;
     
     // 이미 초기화되어 있으므로 별도 로딩 불필요
     console.warn('usePreloadTranslations is deprecated. Translations are now preloaded automatically.');
