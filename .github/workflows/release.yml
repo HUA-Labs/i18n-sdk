@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -34,15 +37,6 @@ jobs:
       with:
         script: |
           const tag = context.ref.replace('refs/tags/', '');
-          const changelog = await github.rest.repos.getContent({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            path: 'CHANGELOG.md'
-          });
-          
-          const changelogContent = Buffer.from(changelog.data.content, 'base64').toString();
-          const versionSection = changelogContent.split('## [' + tag + ']')[1];
-          const releaseNotes = versionSection ? versionSection.split('## [')[0] : '';
           
           await github.rest.repos.createRelease({
             owner: context.repo.owner,
@@ -51,7 +45,8 @@ jobs:
             name: 'Release ' + tag,
             body: `## 🎉 Release ${tag}
             
-            ${releaseNotes}
+            ### What's New
+            - Check the [CHANGELOG.md](https://github.com/HUA-Labs/i18n-sdk/blob/main/CHANGELOG.md) for detailed changes
             
             ### Installation
             \`\`\`bash
