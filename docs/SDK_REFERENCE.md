@@ -1,6 +1,6 @@
-# hua-i18n-sdk API Reference
+# hua-i18n-sdk SDK Reference
 
-> **hua-i18n-sdk v0.4.0** - React 애플리케이션을 위한 간단하고 강력한 국제화 SDK
+> **hua-i18n-sdk v1.0.3** - React 애플리케이션을 위한 간단하고 강력한 국제화 SDK
 
 ---
 
@@ -17,6 +17,7 @@
 3. [타입 정의](#3-타입-정의)
 4. [사용 예제](#4-사용-예제)
 5. [고급 사용법](#5-고급-사용법)
+6. [폴백 시스템](#6-폴백-시스템)
 
 ---
 
@@ -106,7 +107,7 @@ type Formality = 'informal' | 'casual' | 'formal' | 'polite';
 // 1. 설정
 const i18nConfig: I18nConfig = {
   defaultLanguage: 'ko',
-  fallbackLanguage: 'en',
+  fallbackLanguage: 'ko', // 한국어 우선 폴백
   supportedLanguages: [
     { code: 'ko', name: 'Korean', nativeName: '한국어' },
     { code: 'en', name: 'English', nativeName: 'English' },
@@ -225,7 +226,7 @@ const customLoader = async (language: string, namespace: string) => {
 ```tsx
 const devConfig = createDevConfig({
   defaultLanguage: 'ko',
-  fallbackLanguage: 'en',
+  fallbackLanguage: 'ko',
   supportedLanguages: [
     { code: 'ko', name: 'Korean', nativeName: '한국어' },
     { code: 'en', name: 'English', nativeName: 'English' },
@@ -235,6 +236,47 @@ const devConfig = createDevConfig({
 });
 
 // 디버그 모드 활성화, 누락 키 표시, 에러 핸들링 포함
+```
+
+---
+
+### 6. 폴백 시스템
+
+#### 폴백 체인
+
+hua-i18n-sdk는 강력한 폴백 시스템을 제공합니다:
+
+```tsx
+// 폴백 순서: 요청 언어 → 폴백 언어 → missing key handler
+const config = {
+  defaultLanguage: 'ko',
+  fallbackLanguage: 'ko', // 한국어 우선
+  // ...
+};
+```
+
+#### 폴백 예시
+
+```tsx
+// 한국어 번역 파일에만 존재하는 키
+// ko/common.json: { "koreanOnly": "이 메시지는 한국어에만 존재합니다" }
+// en/common.json: { } (빈 객체)
+
+// 영어 모드에서 사용 시
+t('common.koreanOnly'); // → "이 메시지는 한국어에만 존재합니다" (폴백)
+```
+
+#### 개발/프로덕션 환경별 처리
+
+```tsx
+const config = {
+  missingKeyHandler: (key: string, language: string) => {
+    if (process.env.NODE_ENV === 'development') {
+      return `[MISSING: ${key}]`; // 개발: 디버깅용
+    }
+    return key.split('.').pop() || 'Translation not found'; // 프로덕션: 사용자 친화적
+  },
+};
 ```
 
 ---
@@ -250,6 +292,7 @@ const devConfig = createDevConfig({
 3. [Type Definitions](#3-type-definitions)
 4. [Usage Examples](#4-usage-examples)
 5. [Advanced Usage](#5-advanced-usage)
+6. [Fallback System](#6-fallback-system)
 
 ---
 
@@ -339,7 +382,7 @@ type Formality = 'informal' | 'casual' | 'formal' | 'polite';
 // 1. Configuration
 const i18nConfig: I18nConfig = {
   defaultLanguage: 'en',
-  fallbackLanguage: 'ko',
+  fallbackLanguage: 'ko', // Korean-first fallback
   supportedLanguages: [
     { code: 'en', name: 'English', nativeName: 'English' },
     { code: 'ko', name: 'Korean', nativeName: '한국어' },
@@ -414,10 +457,10 @@ function LanguageSwitcher() {
 
 ### 5. Advanced Usage
 
-#### Type-Safe Translation
+#### Type-Safe Translations
 
 ```tsx
-// Translation data type definition
+// Define translation data types
 interface MyTranslations {
   common: {
     welcome: string;
@@ -429,10 +472,10 @@ interface MyTranslations {
   };
 }
 
-// Type-safe context usage
+// Use type-safe context
 const { t } = useI18n<MyTranslations>();
 
-// Auto-completion support
+// Autocomplete support
 t('common.welcome'); // ✅ Type safe
 t('common.invalid'); // ❌ Type error
 ```
@@ -467,23 +510,46 @@ const devConfig = createDevConfig({
   loadTranslations: fileLoader,
 });
 
-// Debug mode enabled, missing key display, error handling included
+// Includes debug mode, missing key display, error handling
 ```
 
 ---
 
-## 📊 Performance & Statistics
+### 6. Fallback System
 
-- **Bundle Size**: ~15KB (gzipped)
-- **Supported**: React 16.8+, Next.js, SSR/CSR
-- **Languages**: Korean, English, and extensible
-- **TypeScript**: Full support with auto-completion
+#### Fallback Chain
 
----
+hua-i18n-sdk provides a powerful fallback system:
 
-## 🔗 Related Links
+```tsx
+// Fallback order: requested language → fallback language → missing key handler
+const config = {
+  defaultLanguage: 'en',
+  fallbackLanguage: 'ko', // Korean-first fallback
+  // ...
+};
+```
 
-- [GitHub Repository](https://github.com/HUA-Labs/i18n-sdk)
-- [NPM Package](https://www.npmjs.com/package/hua-i18n-sdk)
-- [Example Project](./examples/nextjs-basic/)
-- [Changelog](./CHANGELOG.md)
+#### Fallback Example
+
+```tsx
+// Key exists only in Korean translation file
+// ko/common.json: { "koreanOnly": "이 메시지는 한국어에만 존재합니다" }
+// en/common.json: { } (empty object)
+
+// When used in English mode
+t('common.koreanOnly'); // → "이 메시지는 한국어에만 존재합니다" (fallback)
+```
+
+#### Development/Production Environment Handling
+
+```tsx
+const config = {
+  missingKeyHandler: (key: string, language: string) => {
+    if (process.env.NODE_ENV === 'development') {
+      return `[MISSING: ${key}]`; // Development: for debugging
+    }
+    return key.split('.').pop() || 'Translation not found'; // Production: user-friendly
+  },
+};
+```

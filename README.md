@@ -78,7 +78,7 @@ return <h1>{title}</h1>;
 
 ## 문서 & 예제
 
-- **[API Reference](./docs/API_REFERENCE.md)** - 완전한 API 문서 (한국어/영어)
+- **[SDK Reference](./docs/SDK_REFERENCE.md)** - 완전한 SDK 문서 (한국어/영어)
 - **[Live Demo](../examples/nextjs-basic/)** - Next.js 통합 예제
 - **[Changelog](./CHANGELOG.md)** - 버전 변경사항
 
@@ -103,4 +103,4 @@ return <h1>{title}</h1>;
 
 ---
 
-> **자세한 사용법과 고급 기능은 [API Reference](./docs/API_REFERENCE.md)를 참조하세요!**
+> **자세한 사용법과 고급 기능은 [SDK Reference](./docs/SDK_REFERENCE.md)를 참조하세요!**

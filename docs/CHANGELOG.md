@@ -5,7 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-01-27
+## [1.0.3] - 2025-07-17
+
+### 🎯 Perfect Fallback & Demo Polish
+
+This release focuses on perfecting the fallback system and creating an outstanding demo experience. The SDK now provides a truly production-ready internationalization solution with comprehensive Korean-first support.
+
+### Fixed
+
+- **Fallback Logic**: Fixed critical bug where fallback wasn't working properly
+  - Improved `findInNamespace` method to handle `undefined` values correctly
+  - Fixed fallback direction: English → Korean (instead of English → English)
+  - Enhanced `getNestedValue` checks for proper fallback chain execution
+- **Missing Key Handling**: Better development vs production environment handling
+  - Development: Shows `[MISSING: key]` for debugging
+  - Production: Shows user-friendly fallback messages
+
+### Added
+
+- **Korean-First Translation**: Complete Korean translation for all demo UI elements
+  - All developer messages, placeholders, and UI text fully translated
+  - Korean as primary language with English as secondary
+  - Comprehensive translation coverage including error messages
+- **Perfect Demo Experience**: Outstanding Next.js demo with real fallback examples
+  - True fallback demonstration: Korean-only keys fallback properly in English mode
+  - Interactive language switching with visual feedback
+  - Real-time status display and dynamic content updates
+  - Professional UI/UX with smooth animations and modern design
+- **Enhanced Language Switcher**: Improved dropdown with fixed width and better UX
+  - Consistent layout without size changes when expanded
+  - Smooth animations and hover effects
+  - Better visual hierarchy and accessibility
+
+### Changed
+
+- **Demo Configuration**: Updated fallback language to Korean for proper demo behavior
+  - `fallbackLanguage: 'ko'` ensures English → Korean fallback
+  - Better demonstration of fallback capabilities
+- **Documentation**: Updated all examples and guides to reflect new features
+- **Code Quality**: Improved error handling and type safety throughout
+
+### Migration Guide
+
+This release is fully backward compatible. The main change is improved fallback behavior, which should work more reliably in all scenarios.
+
+---
+
+## [1.0.2] - 2025-07-17
+
+### Fixed
+
+- **Fallback Logic**: Fixed critical bug where fallback wasn't working properly
+  - Improved `findInNamespace` method to handle `undefined` values correctly
+  - Enhanced `getNestedValue` checks for proper fallback chain execution
+
+## [1.0.1] - 2025-07-17
+
+### Fixed
+
+- **Package Publishing**: Resolved npm publish issues and file path corrections
+- **Documentation**: Fixed CHANGELOG.md location and example project references
+
+## [1.0.0] - 2025-07-17
 
 ### 🎉 Major Release - Production Ready
 

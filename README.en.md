@@ -78,7 +78,7 @@ return <h1>{title}</h1>;
 
 ## Documentation & Examples
 
-- **[API Reference](./docs/API_REFERENCE.md)** - Complete API documentation
+- **[SDK Reference](./docs/SDK_REFERENCE.md)** - Complete SDK documentation
 - **[Live Demo](../examples/nextjs-basic/)** - Next.js integration example
 - **[Changelog](./CHANGELOG.md)** - Version history
 
@@ -103,4 +103,4 @@ Bug reports, feature suggestions, and PRs are all welcome!
 
 ---
 
-> **For detailed usage and advanced features, see [API Reference](./docs/API_REFERENCE.md)!**
+> **For detailed usage and advanced features, see [SDK Reference](./docs/SDK_REFERENCE.md)!**

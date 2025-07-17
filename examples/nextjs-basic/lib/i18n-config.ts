@@ -2,7 +2,7 @@ import { I18nConfig } from 'hua-i18n-sdk';
 
 export const i18nConfig: I18nConfig = {
   defaultLanguage: 'ko',
-  fallbackLanguage: 'en',
+  fallbackLanguage: 'ko',
   supportedLanguages: [
     { code: 'ko', name: 'Korean', nativeName: '한국어' },
     { code: 'en', name: 'English', nativeName: 'English' },
