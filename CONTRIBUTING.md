@@ -1,12 +1,12 @@
 # Contributing to hua-i18n-sdk
 
-Thank you for your interest in contributing to hua-i18n-sdk! This document provides guidelines for contributing to this project.
+Thank you for your interest in contributing to hua-i18n-sdk! This document provides guidelines and information for contributors.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (>= 16.0.0)
+- Node.js 18+ 
 - npm or yarn
 - Git
 
@@ -14,158 +14,91 @@ Thank you for your interest in contributing to hua-i18n-sdk! This document provi
 
 1. Fork the repository
 2. Clone your fork:
-
    ```bash
    git clone https://github.com/YOUR_USERNAME/i18n-sdk.git
    cd i18n-sdk
    ```
-
 3. Install dependencies:
-
    ```bash
    npm install
    ```
-
-4. Build the project:
-
+4. Create a feature branch:
    ```bash
-   npm run build
+   git checkout -b feature/your-feature-name
    ```
 
 ## Development
 
 ### Available Scripts
 
-- `npm run build` - Build the project
 - `npm run dev` - Watch mode for development
-- `npm run clean` - Clean build outputs
-- `npm test` - Run tests
+- `npm run build` - Build the package
+- `npm run test` - Run tests
+- `npm run test:watch` - Run tests in watch mode
 - `npm run test:coverage` - Run tests with coverage
-
-### Project Structure
-
-```text
-src/
-├── core/           # Core translation logic
-├── hooks/          # React hooks
-├── types/          # TypeScript type definitions
-├── __tests__/      # Test files
-└── index.ts        # Main entry point
-```
-
-## Contributing Guidelines
+- `npm run lint` - Run ESLint
+- `npm run lint:fix` - Fix ESLint issues
+- `npm run type-check` - Run TypeScript type checking
 
 ### Code Style
 
+- Follow the existing code style
 - Use TypeScript for all new code
-- Follow existing code style and patterns
-- Add proper JSDoc comments for public APIs
-- Ensure all tests pass
+- Write meaningful commit messages
+- Add tests for new features
+- Update documentation as needed
 
-### Commit Messages
+### Testing
 
-Follow conventional commits format:
+- Write unit tests for new features
+- Ensure all tests pass before submitting
+- Maintain good test coverage
+- Test both SSR and CSR scenarios
 
-```text
-type(scope): description
+## Pull Request Process
 
-[optional body]
-
-[optional footer]
-```
-
-Types:
-
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes
-- `refactor`: Code refactoring
-- `test`: Test changes
-- `chore`: Build process or auxiliary tool changes
-
-### Pull Request Process
-
-1. Create a feature branch from `main`
-2. Make your changes
-3. Add tests if applicable
-4. Update documentation if needed
-5. Ensure the build passes
-6. Submit a pull request
+1. Ensure your code follows the project's style guidelines
+2. Add tests for any new functionality
+3. Update documentation if needed
+4. Make sure all tests pass
+5. Update the CHANGELOG.md if your changes are user-facing
+6. Submit a pull request with a clear description
 
 ### Pull Request Guidelines
 
+- Use a descriptive title
 - Provide a clear description of the changes
-- Include any relevant issue numbers
-- Add screenshots for UI changes
-- Ensure all CI checks pass
+- Reference any related issues
+- Include screenshots for UI changes
+- Ensure the PR is ready for review
 
-## Testing
+## Issue Reporting
 
-### Running Tests
+Before creating an issue, please:
 
-```bash
-npm test
-```
+1. Search existing issues to avoid duplicates
+2. Use the appropriate issue template
+3. Provide a minimal reproduction example
+4. Include relevant environment information
 
-### Writing Tests
+## Release Process
 
-- Write tests for new features
-- Ensure good test coverage
-- Use descriptive test names
+Releases are managed through semantic versioning:
 
-## Documentation
-
-### Updating Documentation
-
-- Update README.md for new features
-- Add examples for new APIs
-- Keep documentation in sync with code changes
-
-### Translation Files
-
-When adding new languages or translations:
-
-1. Create translation files in the appropriate language directory
-2. Follow the existing naming conventions
-3. Ensure all keys are translated
-4. Test with the new language
-
-## Issues
-
-### Reporting Bugs
-
-When reporting bugs, please include:
-
-- Clear description of the issue
-- Steps to reproduce
-- Expected vs actual behavior
-- Environment details (OS, Node.js version, etc.)
-- Code examples if applicable
-
-### Feature Requests
-
-For feature requests:
-
-- Describe the feature clearly
-- Explain the use case
-- Provide examples if possible
-- Consider implementation complexity
+- **Patch releases** (1.0.x): Bug fixes and minor improvements
+- **Minor releases** (1.x.0): New features, backward compatible
+- **Major releases** (x.0.0): Breaking changes
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
-
-## License
-
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+Please be respectful and inclusive in all interactions. We follow the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Questions?
 
 If you have questions about contributing, please:
 
-1. Check existing issues and discussions
-2. Create a new issue with the "question" label
-3. Join our community discussions
+1. Check the documentation
+2. Search existing issues
+3. Create a new issue with the "question" label
 
-Thank you for contributing to hua-i18n-sdk!
+Thank you for contributing to hua-i18n-sdk! 🎉
