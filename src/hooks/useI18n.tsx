@@ -20,7 +20,7 @@ export function I18nProvider({
   config, 
   children 
 }: { 
-  config: I18nConfig; 
+  config: I18nConfig & { autoLanguageSync?: boolean }; 
   children: React.ReactNode; 
 }) {
   const [currentLanguage, setCurrentLanguageState] = useState(config.defaultLanguage);
@@ -51,7 +51,7 @@ export function I18nProvider({
         const initError = err as TranslationError;
         setError(initError);
         if (config.debug) {
-          console.error('Failed to initialize translator:', initError);
+        console.error('Failed to initialize translator:', initError);
         }
       } finally {
         setIsLoading(false);
@@ -60,6 +60,32 @@ export function I18nProvider({
 
     initializeTranslator();
   }, [translator, currentLanguage, config.debug]);
+
+  // 자동 언어 전환 이벤트 처리
+  useEffect(() => {
+    if (!config.autoLanguageSync || typeof window === 'undefined') {
+      return;
+    }
+
+    const handleLanguageChange = (event: CustomEvent) => {
+      const newLanguage = event.detail;
+      if (typeof newLanguage === 'string' && newLanguage !== currentLanguage) {
+        console.log('🌐 Auto language sync:', newLanguage);
+        setLanguage(newLanguage);
+      }
+    };
+
+    // hua-i18n-sdk 언어 전환 이벤트 감지
+    window.addEventListener('huaI18nLanguageChange', handleLanguageChange as EventListener);
+    
+    // 일반적인 언어 변경 이벤트도 감지
+    window.addEventListener('i18nLanguageChanged', handleLanguageChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('huaI18nLanguageChange', handleLanguageChange as EventListener);
+      window.removeEventListener('i18nLanguageChanged', handleLanguageChange as EventListener);
+    };
+  }, [config.autoLanguageSync, currentLanguage]);
 
   // 언어 변경 함수 (메모이제이션)
   const setLanguage = useCallback((language: string) => {
@@ -89,7 +115,7 @@ export function I18nProvider({
   const tAsync = useCallback(async (key: string, params?: TranslationParams) => {
     if (!translator) {
       if (config.debug) {
-        console.warn('Translator not initialized');
+      console.warn('Translator not initialized');
       }
       return key;
     }
@@ -100,7 +126,7 @@ export function I18nProvider({
       return result;
     } catch (error) {
       if (config.debug) {
-        console.error('Translation error:', error);
+      console.error('Translation error:', error);
       }
       return key;
     } finally {
@@ -112,7 +138,7 @@ export function I18nProvider({
   const tSync = useCallback((key: string, namespace?: string, params?: TranslationParams) => {
     if (!translator) {
       if (config.debug) {
-        console.warn('Translator not initialized');
+      console.warn('Translator not initialized');
       }
       return key;
     }

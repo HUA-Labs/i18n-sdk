@@ -1,13 +1,94 @@
+import React from 'react';
+
 // Types
 export * from './types';
 // Core
 export { Translator, ssrTranslate } from './core/translator';
 // Hooks
 export { I18nProvider, useI18n, useTranslation, useLanguageChange, usePreloadTranslations, useAutoLoadNamespace } from './hooks/useI18n';
+
 // 기본 설정 헬퍼 함수들
 export function createI18nConfig(config: any) {
     return config;
 }
+
+// 초보자용 기본 설정 함수
+export function withDefaultConfig(options?: {
+    defaultLanguage?: string;
+    fallbackLanguage?: string;
+    namespaces?: string[];
+    debug?: boolean;
+    autoLanguageSync?: boolean;
+}) {
+    const defaultLanguages = [
+        { code: 'ko', name: 'Korean', nativeName: '한국어' },
+        { code: 'en', name: 'English', nativeName: 'English' },
+    ];
+
+    const config = createI18nConfig({
+        defaultLanguage: options?.defaultLanguage || 'ko',
+        fallbackLanguage: options?.fallbackLanguage || 'en',
+        supportedLanguages: defaultLanguages,
+        namespaces: options?.namespaces || ['common'],
+        loadTranslations: createDefaultFileLoader(),
+        debug: options?.debug ?? (process.env.NODE_ENV === 'development'),
+        missingKeyHandler: (key: string) => {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn(`Missing translation key: ${key}`);
+                return `[MISSING: ${key}]`;
+            }
+            return key;
+        },
+        errorHandler: (error: any, language: string, namespace: string) => {
+            if (process.env.NODE_ENV === 'development') {
+                console.error(`Translation error for ${language}:${namespace}:`, error);
+            }
+        },
+        // 자동 언어 전환 이벤트 처리 (기본값: true)
+        autoLanguageSync: options?.autoLanguageSync ?? true,
+    });
+
+    // Provider 컴포넌트 반환
+    return function DefaultI18nProvider({ children }: { children: React.ReactNode }) {
+        const { I18nProvider } = require('./hooks/useI18n');
+        return React.createElement(I18nProvider, { config }, children);
+    };
+}
+
+// 기본 파일 로더 (translations/ko/common.json 형태)
+function createDefaultFileLoader() {
+    return async (language: string, namespace: string) => {
+        try {
+            // 동적 import를 사용하여 번역 파일 로드
+            // 테스트 환경에서는 상대 경로가 다를 수 있으므로 여러 경로 시도
+            const possiblePaths = [
+                `../translations/${language}/${namespace}.json`,
+                `./translations/${language}/${namespace}.json`,
+                `translations/${language}/${namespace}.json`,
+                `../../translations/${language}/${namespace}.json`,
+            ];
+
+            for (const path of possiblePaths) {
+                try {
+                    const module = await import(path);
+                    return module.default || module;
+                } catch (pathError) {
+                    // 다음 경로 시도
+                    continue;
+                }
+            }
+
+            // 모든 경로가 실패하면 빈 객체 반환
+            console.warn(`Failed to load translation file: ${language}/${namespace}.json`);
+            return {};
+        }
+        catch (error) {
+            console.warn(`Failed to load translation file: translations/${language}/${namespace}.json`);
+            return {};
+        }
+    };
+}
+
 // 간단한 설정 함수들
 export function createSimpleConfig(options: any) {
     const supportedLanguages = [
@@ -23,6 +104,7 @@ export function createSimpleConfig(options: any) {
         debug: options.debug || false,
     });
 }
+
 // 파일 기반 번역 로더 (일반적인 사용 사례)
 export function createFileLoader(basePath: string) {
     return async (language: string, namespace: string) => {
@@ -37,6 +119,7 @@ export function createFileLoader(basePath: string) {
         }
     };
 }
+
 // API 기반 번역 로더
 export function createApiLoader(apiUrl: string, apiKey?: string) {
     return async (language: string, namespace: string) => {
@@ -61,6 +144,7 @@ export function createApiLoader(apiUrl: string, apiKey?: string) {
         }
     };
 }
+
 // 개발용 설정 (디버그 모드 활성화)
 export function createDevConfig(config: any) {
     return {

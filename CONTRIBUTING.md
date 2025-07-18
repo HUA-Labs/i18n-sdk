@@ -17,7 +17,7 @@ Thank you for your interest in contributing to hua-i18n-sdk! This document provi
 2. Clone your fork:
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/i18n-sdk.git
+   git clone https://github.com/HUA-Labs/i18n-sdk.git
    cd i18n-sdk
    ```
 

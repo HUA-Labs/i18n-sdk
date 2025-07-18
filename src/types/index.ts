@@ -44,6 +44,8 @@ export interface I18nConfig {
     userFriendlyMessages?: boolean;
     suppressErrors?: boolean;
   };
+  // 자동 언어 전환 이벤트 처리 (withDefaultConfig용)
+  autoLanguageSync?: boolean;
 }
 
 // 에러 타입 정의
@@ -206,7 +208,7 @@ export type NamespaceKeys<T extends TranslationData, N extends keyof T> = Extrac
 export const createTranslationKey = <T extends TranslationData, N extends keyof T, K extends NamespaceKeys<T, N>>(
   namespace: N,
   key: K
-): `${N & string}.${K & string}` => `${String(namespace)}.${String(key)}` as any;
+): `${N & string}.${K & string}` => `${String(namespace)}.${String(key)}` as any; 
 
 // 타입 가드 함수들
 export function isTranslationNamespace(value: unknown): value is TranslationNamespace {

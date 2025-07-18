@@ -1,6 +1,6 @@
 # hua-i18n-sdk SDK Reference
 
-> **hua-i18n-sdk v1.1.0** - React 애플리케이션을 위한 간단하고 강력한 국제화 SDK
+> **hua-i18n-sdk v1.2.0** - React 애플리케이션을 위한 간단하고 강력한 국제화 SDK
 
 ---
 
@@ -13,13 +13,15 @@
 ### 📋 목차
 
 1. [주요 API](#1-주요-api)
-2. [설정 옵션](#2-설정-옵션)
-3. [타입 정의](#3-타입-정의)
-4. [사용 예제](#4-사용-예제)
-5. [고급 사용법](#5-고급-사용법)
-6. [에러 처리](#6-에러-처리-v110)
-7. [폴백 시스템](#7-폴백-시스템)
-8. [마이그레이션 가이드](#8-마이그레이션-가이드-v10x--v110)
+2. [초보자용 API (v1.2.0)](#2-초보자용-api-v120)
+3. [설정 옵션](#3-설정-옵션)
+4. [타입 정의](#4-타입-정의)
+5. [사용 예제](#5-사용-예제)
+6. [고급 사용법](#6-고급-사용법)
+7. [에러 처리](#7-에러-처리-v110)
+8. [폴백 시스템](#8-폴백-시스템)
+9. [마이그레이션 가이드 (v1.0.x → v1.1.0)](#9-마이그레이션-가이드-v10x--v110)
+10. [마이그레이션 가이드](#10-마이그레이션-가이드)
 
 ---
 
@@ -56,7 +58,146 @@
 
 ---
 
-### 2. 설정 옵션
+### 2. 초보자용 API (v1.2.0)
+
+#### 🚀 withDefaultConfig() - 한 줄 설정
+
+초보자를 위한 **한 줄 설정** API입니다. 복잡한 설정 없이 바로 시작할 수 있습니다.
+
+| API | 타입 | 설명 | 예시 |
+|-----|------|------|------|
+| `withDefaultConfig()` | Function | 초보자용 한 줄 설정 | `export const I18nProvider = withDefaultConfig();` |
+| `withDefaultConfig(options)` | Function | 커스터마이징 가능한 설정 | `withDefaultConfig({ defaultLanguage: 'en' })` |
+
+#### 🎯 기본 설정값
+
+`withDefaultConfig()`는 다음과 같은 기본값으로 설정됩니다:
+
+```tsx
+{
+  defaultLanguage: 'ko',           // 기본 언어: 한국어
+  fallbackLanguage: 'en',          // 폴백 언어: 영어
+  namespaces: ['common'],          // 기본 네임스페이스
+  debug: NODE_ENV === 'development', // 개발 모드에서만 디버그
+  autoLanguageSync: true,          // 자동 언어 전환 감지
+  loadTranslations: createFileLoader('./translations') // 기본 파일 로더
+}
+```
+
+#### 🚀 Easy Entry Point - 초보자 전용
+
+```tsx
+// 초보자 전용 엔트리포인트 - 가장 간단한 방법
+import { withDefaultConfig, useTranslation } from 'hua-i18n-sdk/easy';
+
+// 한 줄로 끝! 복잡한 설정 없이 바로 시작
+export const I18nProvider = withDefaultConfig();
+
+function App() {
+  return (
+    <I18nProvider>
+      <MyComponent />
+    </I18nProvider>
+  );
+}
+
+function MyComponent() {
+  const { t, tWithParams } = useTranslation();
+  
+  return (
+    <div>
+      <h1>{t('common.welcome')}</h1>
+      <p>{tWithParams('common.greeting', { name: '철수' })}</p>
+    </div>
+  );
+}
+```
+
+#### 🚀 기본 엔트리포인트 - 초보자용
+
+```tsx
+// 기본 엔트리포인트에서도 사용 가능
+import { withDefaultConfig, useTranslation } from 'hua-i18n-sdk';
+
+// 한 줄로 끝! 복잡한 설정 없이 바로 시작
+export const I18nProvider = withDefaultConfig();
+
+function App() {
+  return (
+    <I18nProvider>
+      <MyComponent />
+    </I18nProvider>
+  );
+}
+```
+
+#### ⚙️ withDefaultConfig() 옵션
+
+필요한 부분만 커스터마이징할 수 있습니다:
+
+| 옵션 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `defaultLanguage` | string | `'ko'` | 기본 언어 |
+| `fallbackLanguage` | string | `'en'` | 폴백 언어 |
+| `namespaces` | string[] | `['common']` | 네임스페이스 목록 |
+| `debug` | boolean | `NODE_ENV === 'development'` | 디버그 모드 |
+| `autoLanguageSync` | boolean | `true` | 자동 언어 전환 이벤트 감지 |
+
+#### 📝 사용 예시
+
+```tsx
+// 1. 완전 기본 설정 (가장 간단)
+export const I18nProvider = withDefaultConfig();
+
+// 2. 언어만 변경
+export const I18nProvider = withDefaultConfig({
+  defaultLanguage: 'en'
+});
+
+// 3. 여러 네임스페이스 추가
+export const I18nProvider = withDefaultConfig({
+  namespaces: ['common', 'auth', 'dashboard']
+});
+
+// 4. 디버그 모드 활성화
+export const I18nProvider = withDefaultConfig({
+  debug: true
+});
+
+// 5. 자동 언어 전환 비활성화
+export const I18nProvider = withDefaultConfig({
+  autoLanguageSync: false
+});
+```
+
+#### Auto Language Sync
+
+`autoLanguageSync` 옵션은 언어 전환 이벤트를 자동으로 감지합니다:
+
+```tsx
+// 자동으로 감지하는 이벤트들
+window.addEventListener('huaI18nLanguageChange', (event) => {
+  // SDK 내부 언어 변경 이벤트
+  const newLanguage = event.detail;
+});
+
+window.addEventListener('i18nLanguageChanged', (event) => {
+  // 일반적인 언어 변경 이벤트
+  const newLanguage = event.detail;
+});
+
+// 사용 예시
+const changeLanguage = (language) => {
+  // 이벤트 발생 → withDefaultConfig()가 자동으로 감지
+  window.dispatchEvent(new CustomEvent('i18nLanguageChanged', { 
+    detail: language 
+  }));
+};
+```
+
+---
+
+### 3. 설정 옵션
 
 #### I18nConfig 인터페이스
 
@@ -117,7 +258,7 @@ interface ErrorHandlingOptions {
 
 ---
 
-### 3. 타입 정의
+### 4. 타입 정의
 
 #### 주요 타입들
 
@@ -169,9 +310,59 @@ type TranslationErrorCode =
 
 ---
 
-### 4. 사용 예제
+### 5. 사용 예제
 
-#### 기본 사용법
+#### 🚀 초보자용 (추천) - withDefaultConfig()
+
+```tsx
+// 초보자 전용 엔트리포인트
+import { withDefaultConfig, useTranslation } from 'hua-i18n-sdk/easy';
+
+// 한 줄로 끝! 기본 설정으로 시작
+export const I18nProvider = withDefaultConfig();
+
+function App() {
+  return (
+    <I18nProvider>
+      <MyComponent />
+    </I18nProvider>
+  );
+}
+
+function MyComponent() {
+  const { t, tWithParams } = useTranslation();
+  
+  return (
+    <div>
+      <h1>{t('common.welcome')}</h1>
+      <p>{tWithParams('common.greeting', { name: '철수' })}</p>
+    </div>
+  );
+}
+```
+
+#### ⚙️ 중급자용 - 부분 커스터마이징
+
+```tsx
+import { withDefaultConfig, useTranslation } from 'hua-i18n-sdk';
+
+// 필요한 부분만 커스터마이징
+export const I18nProvider = withDefaultConfig({
+  defaultLanguage: 'en',
+  namespaces: ['common', 'auth'],
+  debug: true,
+});
+
+function App() {
+  return (
+    <I18nProvider>
+      <MyComponent />
+    </I18nProvider>
+  );
+}
+```
+
+#### 🔧 고급자용 - 완전 커스터마이징
 
 ```tsx
 // 1. 설정
@@ -268,7 +459,7 @@ function LanguageSwitcher() {
 
 ---
 
-### 5. 고급 사용법
+### 6. 고급 사용법
 
 #### 타입 안전한 번역
 
@@ -377,7 +568,7 @@ const config: I18nConfig = {
 
 ---
 
-### 6. 에러 처리 (v1.1.0)
+### 7. 에러 처리 (v1.1.0)
 
 #### 에러 타입과 코드
 
@@ -469,7 +660,7 @@ const loggingConfigs = {
 
 ---
 
-### 7. 폴백 시스템
+### 8. 폴백 시스템
 
 #### 폴백 체인
 
@@ -510,7 +701,7 @@ const config = {
 
 ---
 
-### 8. 마이그레이션 가이드 (v1.0.x → v1.1.0)
+### 9. 마이그레이션 가이드 (v1.0.x → v1.1.0)
 
 #### 호환성 보장
 
@@ -596,44 +787,155 @@ try {
 
 ---
 
+### 10. 마이그레이션 가이드
+
+#### v1.2.0 마이그레이션 - 초보자 친화적 접근
+
+**🎯 새로운 사용자: withDefaultConfig() 사용 권장**
+
+```tsx
+// v1.2.0: 초보자용 한 줄 설정 (추천)
+import { withDefaultConfig } from 'hua-i18n-sdk/easy';
+
+export const I18nProvider = withDefaultConfig();
+```
+
+**⚙️ 기존 사용자: 완전 호환**
+
+```tsx
+// v1.1.0 코드 (그대로 작동)
+const config: I18nConfig = {
+  defaultLanguage: 'en',
+  fallbackLanguage: 'ko',
+  supportedLanguages: [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+  ],
+  namespaces: ['common'],
+  loadTranslations: async (language, namespace) => {
+    const module = await import(`./translations/${language}/${namespace}.json`);
+    return module.default;
+  },
+};
+
+// v1.2.0에서도 동일하게 작동
+```
+
+#### v1.1.0 → v1.2.0 마이그레이션
+
+**✅ 기존 코드는 변경 없이 작동**
+
+```tsx
+// v1.1.0 코드 (변경 없이 작동)
+const config: I18nConfig = {
+  defaultLanguage: 'en',
+  fallbackLanguage: 'ko',
+  supportedLanguages: [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+  ],
+  namespaces: ['common'],
+  loadTranslations: async (language, namespace) => {
+    const module = await import(`./translations/${language}/${namespace}.json`);
+    return module.default;
+  },
+  // v1.1.0: 에러 처리 옵션
+  errorHandling: {
+    recoveryStrategy: {
+      maxRetries: 3,
+      retryDelay: 1000,
+      backoffMultiplier: 2
+    },
+    logging: {
+      enabled: true,
+      level: 'error'
+    },
+    userFriendlyMessages: true
+  }
+};
+
+// v1.2.0에서도 동일하게 작동
+```
+
+#### 새로운 기능 활용 (선택사항)
+
+**🚀 초보자용 접근법**
+
+```tsx
+// v1.2.0: 초보자용 한 줄 설정
+import { withDefaultConfig } from 'hua-i18n-sdk/easy';
+
+export const I18nProvider = withDefaultConfig();
+
+// 또는 부분 커스터마이징
+export const I18nProvider = withDefaultConfig({
+  defaultLanguage: 'en',
+  namespaces: ['common', 'auth'],
+  debug: true,
+});
+```
+
+**🔄 자동 언어 전환**
+
+```tsx
+// v1.2.0: 자동 언어 전환 이벤트 감지
+const config = withDefaultConfig({
+  autoLanguageSync: true, // 기본값: true
+});
+
+// 다른 컴포넌트에서 언어 변경 시
+const changeLanguage = (language) => {
+  // 이벤트 발생 → withDefaultConfig()가 자동으로 감지
+  window.dispatchEvent(new CustomEvent('i18nLanguageChanged', { 
+    detail: language 
+  }));
+};
+```
+
+#### v1.0.x → v1.1.0 마이그레이션
+
 ---
 
 ## 🇺🇸 English
 
+---
+
 ### 📋 Table of Contents
 
-1. [Main API](#1-main-api)
-2. [Configuration Options](#2-configuration-options)
-3. [Type Definitions](#3-type-definitions)
-4. [Usage Examples](#4-usage-examples)
-5. [Advanced Usage](#5-advanced-usage)
-6. [Error Handling](#6-error-handling-v110)
-7. [Fallback System](#7-fallback-system)
-8. [Migration Guide](#8-migration-guide-v10x--v110)
+1. [Core APIs](#1-core-apis)
+2. [Beginner-friendly APIs (v1.2.0)](#2-beginner-friendly-apis-v120)
+3. [Configuration Options](#3-configuration-options)
+4. [Type Definitions](#4-type-definitions)
+5. [Usage Examples](#5-usage-examples)
+6. [Advanced Usage](#6-advanced-usage)
+7. [Error Handling](#7-error-handling-v110)
+8. [Fallback System](#8-fallback-system)
+9. [Migration Guide (v1.0.x → v1.1.0)](#9-migration-guide-v10x--v110)
+10. [Migration Guide](#10-migration-guide)
 
 ---
 
-### 1. Main API
+### 1. Core APIs
 
 #### Core Functions/Hooks/Components
 
 | API | Type | Description | Example |
 |-----|------|-------------|---------|
-| `useTranslation()` | Hook | Main translation hook | `const { t } = useTranslation();` |
-| `useLanguageChange()` | Hook | Language change hook | `const { changeLanguage } = useLanguageChange();` |
+| `useTranslation()` | Hook | Main hook for translation | `const { t } = useTranslation();` |
+| `useLanguageChange()` | Hook | Hook for language switching | `const { changeLanguage } = useLanguageChange();` |
 | `I18nProvider` | Component | i18n context provider | `<I18nProvider config={config}>` |
-| `ssrTranslate()` | Function | Server component translation | `ssrTranslate({ translations, key, language })` |
+| `ssrTranslate()` | Function | Translation function for server components | `ssrTranslate({ translations, key, language })` |
 | `Translator` | Class | Translation processing class | `new Translator(config)` |
 
 #### Helper Functions
 
 | Function | Description | Example |
 |----------|-------------|---------|
-| `createI18nConfig()` | Create basic config | `createI18nConfig({ ... })` |
-| `createSimpleConfig()` | Create simple config | `createSimpleConfig({ defaultLanguage: 'en' })` |
+| `createI18nConfig()` | Create basic configuration | `createI18nConfig({ ... })` |
+| `createSimpleConfig()` | Create simple configuration | `createSimpleConfig({ defaultLanguage: 'ko' })` |
 | `createFileLoader()` | Create file-based loader | `createFileLoader('./translations')` |
 | `createApiLoader()` | Create API-based loader | `createApiLoader('https://api.example.com')` |
-| `createDevConfig()` | Create dev config | `createDevConfig(config)` |
+| `createDevConfig()` | Create development configuration | `createDevConfig(config)` |
 
 #### Error Handling Utilities (v1.1.0)
 
@@ -646,7 +948,146 @@ try {
 
 ---
 
-### 2. Configuration Options
+### 2. Beginner-friendly APIs (v1.2.0)
+
+#### 🚀 withDefaultConfig() - One-line Setup
+
+Beginner-friendly **one-line setup** API. Start immediately without complex configuration.
+
+| API | Type | Description | Example |
+|-----|------|-------------|---------|
+| `withDefaultConfig()` | Function | Beginner-friendly one-line setup | `export const I18nProvider = withDefaultConfig();` |
+| `withDefaultConfig(options)` | Function | Customizable configuration | `withDefaultConfig({ defaultLanguage: 'en' })` |
+
+#### 🎯 Default Configuration Values
+
+`withDefaultConfig()` sets up with the following default values:
+
+```tsx
+{
+  defaultLanguage: 'ko',           // Default language: Korean
+  fallbackLanguage: 'en',          // Fallback language: English
+  namespaces: ['common'],          // Default namespace
+  debug: NODE_ENV === 'development', // Debug only in development mode
+  autoLanguageSync: true,          // Auto language change detection
+  loadTranslations: createFileLoader('./translations') // Default file loader
+}
+```
+
+#### 🚀 Easy Entry Point - Beginner Only
+
+```tsx
+// Beginner-only entry point - Simplest method
+import { withDefaultConfig, useTranslation } from 'hua-i18n-sdk/easy';
+
+// One line setup! Start immediately without complex configuration
+export const I18nProvider = withDefaultConfig();
+
+function App() {
+  return (
+    <I18nProvider>
+      <MyComponent />
+    </I18nProvider>
+  );
+}
+
+function MyComponent() {
+  const { t, tWithParams } = useTranslation();
+  
+  return (
+    <div>
+      <h1>{t('common.welcome')}</h1>
+      <p>{tWithParams('common.greeting', { name: 'John' })}</p>
+    </div>
+  );
+}
+```
+
+#### 🚀 Default Entry Point - Beginner-friendly
+
+```tsx
+// Also available in default entry point
+import { withDefaultConfig, useTranslation } from 'hua-i18n-sdk';
+
+// One line setup! Start immediately without complex configuration
+export const I18nProvider = withDefaultConfig();
+
+function App() {
+  return (
+    <I18nProvider>
+      <MyComponent />
+    </I18nProvider>
+  );
+}
+```
+
+#### ⚙️ withDefaultConfig() Options
+
+Customize only what you need:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `defaultLanguage` | string | `'ko'` | Default language |
+| `fallbackLanguage` | string | `'en'` | Fallback language |
+| `namespaces` | string[] | `['common']` | Namespace list |
+| `debug` | boolean | `NODE_ENV === 'development'` | Debug mode |
+| `autoLanguageSync` | boolean | `true` | Auto language change event detection |
+
+#### 📝 Usage Examples
+
+```tsx
+// 1. Complete default configuration (simplest)
+export const I18nProvider = withDefaultConfig();
+
+// 2. Change language only
+export const I18nProvider = withDefaultConfig({
+  defaultLanguage: 'en'
+});
+
+// 3. Add multiple namespaces
+export const I18nProvider = withDefaultConfig({
+  namespaces: ['common', 'auth', 'dashboard']
+});
+
+// 4. Enable debug mode
+export const I18nProvider = withDefaultConfig({
+  debug: true
+});
+
+// 5. Disable auto language sync
+export const I18nProvider = withDefaultConfig({
+  autoLanguageSync: false
+});
+```
+
+#### Auto Language Sync
+
+The `autoLanguageSync` option automatically detects language change events:
+
+```tsx
+// Events automatically detected
+window.addEventListener('huaI18nLanguageChange', (event) => {
+  // SDK internal language change event
+  const newLanguage = event.detail;
+});
+
+window.addEventListener('i18nLanguageChanged', (event) => {
+  // General language change event
+  const newLanguage = event.detail;
+});
+
+// Usage example
+const changeLanguage = (language) => {
+  // Event dispatch → withDefaultConfig() automatically detects
+  window.dispatchEvent(new CustomEvent('i18nLanguageChanged', { 
+    detail: language 
+  }));
+};
+```
+
+---
+
+### 3. Configuration Options
 
 #### I18nConfig Interface
 
@@ -655,11 +1096,11 @@ try {
 | `defaultLanguage` | string | ✅ | Default language code | - |
 | `fallbackLanguage` | string | ❌ | Fallback language code | `'en'` |
 | `supportedLanguages` | LanguageConfig[] | ✅ | Supported languages list | - |
-| `namespaces` | string[] | ❌ | Namespaces list | `['common']` |
+| `namespaces` | string[] | ❌ | Namespace list | `['common']` |
 | `loadTranslations` | Function | ✅ | Translation loading function | - |
 | `debug` | boolean | ❌ | Debug mode | `false` |
-| `missingKeyHandler` | Function | ❌ | Missing key handler | `(key) => key` |
-| `errorHandler` | Function | ❌ | Error handler | `console.error` |
+| `missingKeyHandler` | Function | ❌ | Missing key handler function | `(key) => key` |
+| `errorHandler` | Function | ❌ | Error handler function | `console.error` |
 | `cacheOptions` | CacheOptions | ❌ | Cache settings | - |
 | `performanceOptions` | PerformanceOptions | ❌ | Performance settings | - |
 | `errorHandling` | ErrorHandlingOptions | ❌ | Error handling settings (v1.1.0) | - |
@@ -689,7 +1130,7 @@ interface PerformanceOptions {
 ```typescript
 interface ErrorHandlingOptions {
   recoveryStrategy?: ErrorRecoveryStrategy;  // Error recovery strategy
-  logging?: ErrorLoggingConfig;              // Error logging configuration
+  logging?: ErrorLoggingConfig;              // Error logging settings
   userFriendlyMessages?: boolean;            // User-friendly messages
   suppressErrors?: boolean;                  // Suppress errors
 }
@@ -699,20 +1140,20 @@ interface ErrorHandlingOptions {
 
 | Property | Type | Required | Description | Example |
 |----------|------|----------|-------------|---------|
-| `code` | string | ✅ | Language code | `'en'` |
-| `name` | string | ✅ | Language name (English) | `'English'` |
-| `nativeName` | string | ✅ | Native language name | `'English'` |
-| `tone` | string | ❌ | Tone setting | `'formal'` |
+| `code` | string | ✅ | Language code | `'ko'` |
+| `name` | string | ✅ | Language name (English) | `'Korean'` |
+| `nativeName` | string | ✅ | Native language name | `'한국어'` |
+| `tone` | string | ❌ | Tone setting | `'emotional'` |
 | `formality` | string | ❌ | Formality level | `'polite'` |
 
 ---
 
-### 3. Type Definitions
+### 4. Type Definitions
 
-#### Main Types
+#### Core Types
 
-| Type | Description | Example |
-|------|-------------|---------|
+| Type Name | Description | Example |
+|-----------|-------------|---------|
 | `TranslationNamespace` | Namespace translation object | `{ welcome: 'Welcome' }` |
 | `TranslationData` | Complete translation data | `{ common: {...}, auth: {...} }` |
 | `TranslationParams` | Translation parameters | `{ name: 'John', count: 5 }` |
@@ -722,11 +1163,11 @@ interface ErrorHandlingOptions {
 
 #### New Types (v1.1.0)
 
-| Type | Description | Example |
-|------|-------------|---------|
-| `TranslationError` | Structured error type | `{ code: 'LOAD_FAILED', language: 'en' }` |
+| Type Name | Description | Example |
+|-----------|-------------|---------|
+| `TranslationError` | Structured error type | `{ code: 'LOAD_FAILED', language: 'ko' }` |
 | `ErrorRecoveryStrategy` | Error recovery strategy | `{ maxRetries: 3, retryDelay: 1000 }` |
-| `ErrorLoggingConfig` | Error logging configuration | `{ enabled: true, level: 'error' }` |
+| `ErrorLoggingConfig` | Error logging settings | `{ enabled: true, level: 'error' }` |
 | `UserFriendlyError` | User-friendly error | `{ message: 'Failed to load translation file' }` |
 | `CacheEntry` | Cache entry | `{ data: {...}, timestamp: 1234567890 }` |
 | `LoadingState` | Loading state | `{ isLoading: true, error: null }` |
@@ -744,60 +1185,29 @@ type Tone = 'emotional' | 'encouraging' | 'calm' | 'gentle' | 'formal' | 'techni
 type Formality = 'informal' | 'casual' | 'formal' | 'polite';
 ```
 
-#### Error Codes (v1.1.0)
-
-```typescript
-type TranslationErrorCode = 
-  | 'MISSING_KEY' 
-  | 'LOAD_FAILED' 
-  | 'INVALID_KEY' 
-  | 'NETWORK_ERROR' 
-  | 'INITIALIZATION_ERROR' 
-  | 'VALIDATION_ERROR' 
-  | 'CACHE_ERROR';
-```
-
 ---
 
-### 4. Usage Examples
+### 5. Usage Examples
 
 #### Basic Usage
 
 ```tsx
-// 1. Configuration
-const i18nConfig: I18nConfig = {
-  defaultLanguage: 'en',
-  fallbackLanguage: 'ko',
+// 1. Configuration setup
+const i18nConfig = createI18nConfig({
+  defaultLanguage: 'ko',
+  fallbackLanguage: 'en',
   supportedLanguages: [
-    { code: 'en', name: 'English', nativeName: 'English' },
     { code: 'ko', name: 'Korean', nativeName: '한국어' },
+    { code: 'en', name: 'English', nativeName: 'English' },
   ],
-  namespaces: ['common', 'auth'],
+  namespaces: ['common'],
   loadTranslations: async (language, namespace) => {
     const module = await import(`./translations/${language}/${namespace}.json`);
     return module.default;
   },
-  // v1.1.0: Error handling options
-  errorHandling: {
-    recoveryStrategy: {
-      maxRetries: 3,
-      retryDelay: 1000,
-      backoffMultiplier: 2,
-      shouldRetry: (error) => error.code === 'NETWORK_ERROR',
-      onRetry: (error, attempt) => console.log(`Retry ${attempt}:`, error.message),
-      onMaxRetriesExceeded: (error) => console.error('Max retries exceeded:', error.message)
-    },
-    logging: {
-      enabled: true,
-      level: 'error',
-      includeStack: true,
-      includeContext: true
-    },
-    userFriendlyMessages: true
-  }
-};
+});
 
-// 2. Provider Setup
+// 2. Provider setup
 function App() {
   return (
     <I18nProvider config={i18nConfig}>
@@ -806,7 +1216,7 @@ function App() {
   );
 }
 
-// 3. Translation Usage
+// 3. Translation usage
 function MyComponent() {
   const { t, tWithParams } = useTranslation();
   
@@ -819,16 +1229,16 @@ function MyComponent() {
 }
 ```
 
-#### Server Component (SSR)
+#### Server Components (SSR)
 
 ```tsx
 import { ssrTranslate } from 'hua-i18n-sdk';
 
 export default function ServerComponent() {
   const title = ssrTranslate({
-    translations: translations.en.common(),
+    translations: translations.ko.common(),
     key: 'common.welcome',
-    language: 'en',
+    language: 'ko',
   });
 
   return <h1>{title}</h1>;
@@ -858,9 +1268,9 @@ function LanguageSwitcher() {
 
 ---
 
-### 5. Advanced Usage
+### 6. Advanced Usage
 
-#### Type-Safe Translations
+#### Type-safe Translation
 
 ```tsx
 // Define translation data types
@@ -903,11 +1313,11 @@ const customLoader = async (language: string, namespace: string) => {
 
 ```tsx
 const devConfig = createDevConfig({
-  defaultLanguage: 'en',
-  fallbackLanguage: 'ko',
+  defaultLanguage: 'ko',
+  fallbackLanguage: 'en',
   supportedLanguages: [
-    { code: 'en', name: 'English', nativeName: 'English' },
     { code: 'ko', name: 'Korean', nativeName: '한국어' },
+    { code: 'en', name: 'English', nativeName: 'English' },
   ],
   namespaces: ['common'],
   loadTranslations: fileLoader,
@@ -925,7 +1335,7 @@ const customRecoveryStrategy: ErrorRecoveryStrategy = {
   retryDelay: 2000,
   backoffMultiplier: 1.5,
   shouldRetry: (error) => {
-    // Only retry network errors or loading failures
+    // Retry only network errors or loading failures
     return ['NETWORK_ERROR', 'LOAD_FAILED'].includes(error.code);
   },
   onRetry: (error, attempt) => {
@@ -967,7 +1377,7 @@ const config: I18nConfig = {
 
 ---
 
-### 6. Error Handling (v1.1.0)
+### 7. Error Handling (v1.1.0)
 
 #### Error Types and Codes
 
@@ -996,111 +1406,103 @@ const config: I18nConfig = {
       retryDelay: 1000,
       backoffMultiplier: 2,
       shouldRetry: (error) => {
-        // Only retry network errors or loading failures
+        // Retry only network errors or loading failures
         return ['NETWORK_ERROR', 'LOAD_FAILED'].includes(error.code);
       },
       onRetry: (error, attempt) => {
-        console.log(`Retry ${attempt}: ${error.message}`);
+        console.log(`Retry ${attempt}:`, error.message);
       },
       onMaxRetriesExceeded: (error) => {
-        console.error('Max retries exceeded:', error.message);
+        // Handle max retries exceeded
+        console.error('Max retries exceeded:', error);
       }
-    }
+    },
+    logging: {
+      enabled: true,
+      level: 'error',
+      includeStack: true,
+      includeContext: true
+    },
+    userFriendlyMessages: true
   }
 };
 ```
 
-#### User-Friendly Error Messages
+#### User-friendly Error Messages
 
 ```tsx
-// Error messages shown to users
-const userFriendlyMessages = {
-  MISSING_KEY: {
-    message: 'Translation key not found',
-    suggestion: 'Please check if the key exists in the translation file',
-    action: 'Update translation file'
-  },
-  LOAD_FAILED: {
-    message: 'Failed to load translation file',
-    suggestion: 'Please check network connection and file path',
-    action: 'Retry'
-  },
-  NETWORK_ERROR: {
-    message: 'Network error occurred',
-    suggestion: 'Please check internet connection and try again',
-    action: 'Retry'
-  }
-};
-```
-
-#### Error Logging Configuration
-
-```tsx
-// Various logging levels and configurations
-const loggingConfigs = {
-  development: {
-    enabled: true,
-    level: 'debug',
-    includeStack: true,
-    includeContext: true
-  },
-  production: {
-    enabled: true,
-    level: 'error',
-    includeStack: false,
-    includeContext: true,
-    customLogger: (error) => {
-      // Send to external logging service in production
-      sendToErrorTracking(error);
+// Development vs Production error handling
+const config: I18nConfig = {
+  // ... basic configuration
+  missingKeyHandler: (key, language, namespace) => {
+    if (process.env.NODE_ENV === 'development') {
+      return `[MISSING: ${key}]`; // Development: Show missing key
     }
-  }
+    return key.split('.').pop() || 'Translation not found'; // Production: User-friendly
+  },
 };
 ```
 
 ---
 
-### 7. Fallback System
+### 8. Fallback System
 
 #### Fallback Chain
 
-hua-i18n-sdk provides a powerful fallback system:
+The SDK implements a robust fallback system that ensures translations are always available:
 
 ```tsx
-// Fallback order: requested language → fallback language → missing key handler
-const config = {
-  defaultLanguage: 'en',
-  fallbackLanguage: 'ko', // Fallback to Korean
-  // ...
+// Fallback chain: ko.common → en.common → key
+const config: I18nConfig = {
+  defaultLanguage: 'ko',
+  fallbackLanguage: 'en',
+  namespaces: ['common'],
+  // ... other config
 };
 ```
 
-#### Fallback Example
+#### Fallback Priority
+
+1. **Primary**: Requested language + namespace
+2. **Secondary**: Fallback language + namespace  
+3. **Tertiary**: Requested language + 'common' namespace
+4. **Quaternary**: Fallback language + 'common' namespace
+5. **Final**: Missing key handler
+
+#### Fallback Examples
 
 ```tsx
-// Key exists only in Korean translation file
-// ko/common.json: { "koreanOnly": "이 메시지는 한국어에만 존재합니다" }
-// en/common.json: { } (empty object)
+// Example 1: Missing key in ko.common
+// Request: t('common.welcome') in Korean
+// Fallback: en.common.welcome
 
-// When used in English mode
-t('common.koreanOnly'); // → "이 메시지는 한국어에만 존재합니다" (fallback)
+// Example 2: Missing namespace
+// Request: t('auth.login') in Korean
+// Fallback: ko.common.login → en.common.login
+
+// Example 3: Missing key everywhere
+// Request: t('unknown.key')
+// Fallback: missingKeyHandler('unknown.key')
 ```
 
-#### Development/Production Environment Handling
+#### Custom Fallback Strategy
 
 ```tsx
-const config = {
-  missingKeyHandler: (key: string, language: string) => {
-    if (process.env.NODE_ENV === 'development') {
-      return `[MISSING: ${key}]`; // Development: for debugging
+const config: I18nConfig = {
+  // ... basic configuration
+  missingKeyHandler: (key, language, namespace) => {
+    // Custom fallback logic
+    if (namespace === 'auth') {
+      return `[AUTH: ${key}]`; // Auth-specific fallback
     }
-    return key.split('.').pop() || 'Translation not found'; // Production: user-friendly
+    return `[${key}]`; // General fallback
   },
 };
 ```
 
 ---
 
-### 8. Migration Guide (v1.0.x → v1.1.0)
+### 9. Migration Guide (v1.0.x → v1.1.0)
 
 #### Compatibility Guarantee
 
@@ -1125,7 +1527,7 @@ const config: I18nConfig = {
 // Works identically in v1.1.0
 ```
 
-#### Utilizing New Features (Optional)
+#### New Features (Optional)
 
 ```tsx
 // v1.1.0: Enhanced error handling (optional)
@@ -1149,7 +1551,7 @@ const config: I18nConfig = {
 #### Enhanced Type Safety
 
 ```tsx
-// v1.1.0: Using new type guards
+// v1.1.0: New type guards
 import { isTranslationNamespace, validateI18nConfig } from 'hua-i18n-sdk';
 
 // Configuration validation
@@ -1158,7 +1560,7 @@ if (!validateI18nConfig(config)) {
 }
 
 // Translation data validation
-const data = await loadTranslations('en', 'common');
+const data = await loadTranslations('ko', 'common');
 if (!isTranslationNamespace(data)) {
   throw new Error('Invalid translation data');
 }
@@ -1177,7 +1579,196 @@ try {
     'LOAD_FAILED',
     error.message,
     error,
-    { language: 'en', namespace: 'common' }
+    { language: 'ko', namespace: 'common' }
+  );
+  
+  logTranslationError(translationError);
+}
+```
+
+---
+
+### 10. Migration Guide
+
+#### v1.2.0 Migration - Beginner-friendly Approach
+
+**🎯 New Users: Recommended to use withDefaultConfig()**
+
+```tsx
+// v1.2.0: Beginner-friendly one-line setup (recommended)
+import { withDefaultConfig } from 'hua-i18n-sdk/easy';
+
+export const I18nProvider = withDefaultConfig();
+```
+
+**⚙️ Existing Users: Fully Compatible**
+
+```tsx
+// v1.1.0 code (works as-is)
+const config: I18nConfig = {
+  defaultLanguage: 'en',
+  fallbackLanguage: 'ko',
+  supportedLanguages: [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+  ],
+  namespaces: ['common'],
+  loadTranslations: async (language, namespace) => {
+    const module = await import(`./translations/${language}/${namespace}.json`);
+    return module.default;
+  },
+};
+
+// Works identically in v1.2.0
+```
+
+#### v1.1.0 → v1.2.0 Migration
+
+**✅ Existing code works without changes**
+
+```tsx
+// v1.1.0 code (works without changes)
+const config: I18nConfig = {
+  defaultLanguage: 'en',
+  fallbackLanguage: 'ko',
+  supportedLanguages: [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+  ],
+  namespaces: ['common'],
+  loadTranslations: async (language, namespace) => {
+    const module = await import(`./translations/${language}/${namespace}.json`);
+    return module.default;
+  },
+  // v1.1.0: Error handling options
+  errorHandling: {
+    recoveryStrategy: {
+      maxRetries: 3,
+      retryDelay: 1000,
+      backoffMultiplier: 2
+    },
+    logging: {
+      enabled: true,
+      level: 'error'
+    },
+    userFriendlyMessages: true
+  }
+};
+
+// Works identically in v1.2.0
+```
+
+#### New Features (Optional)
+
+**🚀 Beginner-friendly Approach**
+
+```tsx
+// v1.2.0: Beginner-friendly one-line setup
+import { withDefaultConfig } from 'hua-i18n-sdk/easy';
+
+export const I18nProvider = withDefaultConfig();
+
+// Or partial customization
+export const I18nProvider = withDefaultConfig({
+  defaultLanguage: 'en',
+  namespaces: ['common', 'auth'],
+  debug: true,
+});
+```
+
+**🔄 Auto Language Sync**
+
+```tsx
+// v1.2.0: Auto language change event detection
+const config = withDefaultConfig({
+  autoLanguageSync: true, // Default: true
+});
+
+// In other components when changing language
+const changeLanguage = (language) => {
+  // Event dispatch → withDefaultConfig() automatically detects
+  window.dispatchEvent(new CustomEvent('i18nLanguageChanged', { 
+    detail: language 
+  }));
+};
+```
+
+#### v1.0.x → v1.1.0 Migration
+
+**✅ Existing code works without changes**
+
+```tsx
+// v1.0.x code (works as-is)
+const config: I18nConfig = {
+  defaultLanguage: 'en',
+  fallbackLanguage: 'ko',
+  supportedLanguages: [
+    { code: 'en', name: 'English', nativeName: 'English' },
+    { code: 'ko', name: 'Korean', nativeName: '한국어' },
+  ],
+  namespaces: ['common'],
+  loadTranslations: async (language, namespace) => {
+    const module = await import(`./translations/${language}/${namespace}.json`);
+    return module.default;
+  },
+};
+
+// Works identically in v1.1.0
+```
+
+#### New Features (Optional)
+
+```tsx
+// v1.1.0: Enhanced error handling (optional)
+const config: I18nConfig = {
+  // ... existing configuration
+  errorHandling: {
+    recoveryStrategy: {
+      maxRetries: 3,
+      retryDelay: 1000,
+      backoffMultiplier: 2
+    },
+    logging: {
+      enabled: true,
+      level: 'error'
+    },
+    userFriendlyMessages: true
+  }
+};
+```
+
+#### Enhanced Type Safety
+
+```tsx
+// v1.1.0: New type guards
+import { isTranslationNamespace, validateI18nConfig } from 'hua-i18n-sdk';
+
+// Configuration validation
+if (!validateI18nConfig(config)) {
+  throw new Error('Invalid configuration');
+}
+
+// Translation data validation
+const data = await loadTranslations('ko', 'common');
+if (!isTranslationNamespace(data)) {
+  throw new Error('Invalid translation data');
+}
+```
+
+#### Improved Error Handling
+
+```tsx
+// v1.1.0: Structured error handling
+import { createTranslationError, logTranslationError } from 'hua-i18n-sdk';
+
+try {
+  // Translation loading
+} catch (error) {
+  const translationError = createTranslationError(
+    'LOAD_FAILED',
+    error.message,
+    error,
+    { language: 'ko', namespace: 'common' }
   );
   
   logTranslationError(translationError);

@@ -4,15 +4,15 @@
 
 ## 📋 목차
 
-- [Next.js](#-nextjs)
-- [Vite](#-vite)
-- [Webpack](#-webpack)
-- [Rollup](#-rollup)
-- [기타 환경](#️-기타-환경)
+- [Next.js](#nextjs)
+- [Vite](#vite)
+- [Webpack](#webpack)
+- [Rollup](#rollup)
+- [기타 환경](#기타-환경)
 
 ---
 
-## 🚀 Next.js
+## Next.js
 
 ### App Router (권장)
 
@@ -99,7 +99,7 @@ const title = ssrTranslate({
 
 ---
 
-## ⚡ Vite
+## Vite
 
 ### 기본 설정
 
@@ -164,7 +164,7 @@ export const i18nConfig: I18nConfig = {
 
 ---
 
-## 📦 Webpack
+## Webpack
 
 ### 기본 설정
 
@@ -231,7 +231,7 @@ export const i18nConfig: I18nConfig = {
 
 ---
 
-## 🔄 Rollup
+## Rollup
 
 ### 기본 설정
 
@@ -283,7 +283,7 @@ export default {
 
 ---
 
-## 🛠️ 기타 환경
+## 기타 환경
 
 ### Parcel
 
